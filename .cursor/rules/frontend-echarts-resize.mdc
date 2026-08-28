@@ -1,0 +1,24 @@
+---
+description: ECharts/VChart 必须在容器有尺寸后再 resize，避免 Tab 内首屏缩成小图
+globs: frontend/**/*.{vue,ts}
+alwaysApply: false
+---
+
+# ECharts 容器尺寸（强制）
+
+## 根因（已踩坑，禁止再犯）
+
+`el-tabs` / `v-show` / 抽屉等**先隐藏再显示**的容器内，`echarts.init` 时 `clientWidth/clientHeight` 常为 0，画布会缩成左下角小图；仅监听 `window.resize` **不够**。
+
+## 强制做法
+
+1. 图表统一用 `components/VChart.vue`，**禁止**页面内直接 `echarts.init`。
+2. `VChart` 必须：
+   - 容器 `width: 100%` + 明确 `height`
+   - `ResizeObserver` 观察容器，尺寸从 0→正值时调用 `chart.resize()`
+   - `nextTick` + `requestAnimationFrame` 在挂载后再补一次 `resize`
+3. Tab 内图表：优先给对应 `el-tab-pane` 加 `lazy`，或确保切换可见后触发 resize（VChart 的 Observer 已覆盖）。
+
+## 自检
+
+首次进入「含图表的 Tab/抽屉」：图表应铺满内容区宽度，标签不挤成一团；从其他 Tab 切回来尺寸仍正确。

@@ -1,0 +1,41 @@
+---
+description: Element Plus 弹层必须挂到 body，避免被页面 transform/overflow 裁切
+globs: frontend/**/*.vue
+alwaysApply: false
+---
+
+# 弹框 / 抽屉挂载规范（强制）
+
+## 根因（已踩坑，禁止再犯）
+
+页面入场动画 `.cp-animate-in` 含 `transform`，布局容器有 `overflow: hidden`。  
+若 `el-dialog` / `el-drawer` / `el-message-box` 挂在页面内部，会被裁切成「半截弹框」。
+
+## 强制写法
+
+所有 `el-dialog` **必须**同时带：
+
+- `append-to-body`
+- `align-center`
+- 建议 `destroy-on-close`
+
+所有 `el-drawer` **必须**带：
+
+- `append-to-body`
+
+示例：
+
+```vue
+<el-dialog
+  v-model="visible"
+  title="标题"
+  width="520px"
+  append-to-body
+  align-center
+  destroy-on-close
+>
+```
+
+## 自检
+
+新增或改动含弹层的页面后，打开弹层确认：遮罩与对话框完整可见、底部按钮可点，不被主内容区白块挡住。
