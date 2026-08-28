@@ -40,7 +40,7 @@ export class AuthController {
     res.cookie(cookieName, result.token, {
       httpOnly: true,
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.isCookieSecure(),
       maxAge: days * 24 * 60 * 60 * 1000,
       path: '/',
     });
@@ -56,8 +56,23 @@ export class AuthController {
   ): { ok: boolean } {
     this.authService.logout(req.user!.sub);
     const cookieName = this.configService.get<string>('COOKIE_NAME', 'cp_token');
-    res.clearCookie(cookieName, { path: '/' });
+    res.clearCookie(cookieName, {
+      path: '/',
+      secure: this.isCookieSecure(),
+      sameSite: 'strict',
+    });
     return { ok: true };
+  }
+
+  /**
+   * 是否对 Cookie 启用 Secure。
+   * 无 HTTPS（仅 IP + HTTP）时在 .env 设 COOKIE_SECURE=false。
+   */
+  private isCookieSecure(): boolean {
+    const flag = this.configService.get<string>('COOKIE_SECURE');
+    if (flag === 'true') return true;
+    if (flag === 'false') return false;
+    return process.env.NODE_ENV === 'production';
   }
 
   /** 当前登录用户 */

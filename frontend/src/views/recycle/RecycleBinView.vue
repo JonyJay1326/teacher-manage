@@ -38,15 +38,16 @@ async function load(): Promise<void> {
   }
 }
 
-/** 恢复 */
-async function restore(row: RecycleItemDto): Promise<void> {
+/** 恢复（表格 row 在模板中为 DefaultRow，此处收窄） */
+async function restore(row: unknown): Promise<void> {
+  const item = row as RecycleItemDto;
   try {
     await ElMessageBox.confirm(
-      `确认恢复「${row.title}」？`,
+      `确认恢复「${item.title}」？`,
       '恢复确认',
       { type: 'info' },
     );
-    await restoreRecycleApi(type.value, row.id);
+    await restoreRecycleApi(type.value, item.id);
     ElMessage.success('已恢复');
     await load();
   } catch (err: unknown) {

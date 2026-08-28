@@ -16,11 +16,12 @@ import { AppException, ErrorCodes } from '../common/api';
 })
 class CliModule {}
 
-/** 创建单用户：npm run cli:create-user -- <username> <password> [displayName] */
+/** 创建单用户：npm run cli:create-user -- <username> <password> [displayName]（生产用 dist，无需 ts-node） */
 async function main(): Promise<void> {
   const [, , username, password, displayNameArg] = process.argv;
   if (!username || !password) {
     console.error('用法: npm run cli:create-user -- <username> <password> [displayName]');
+    console.error('或:   node dist/cli/create-user.js <username> <password> [displayName]');
     process.exit(1);
   }
 

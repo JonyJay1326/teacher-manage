@@ -6,7 +6,8 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start:prod": "node dist/main",
-    "cli:create-user": "ts-node src/cli/create-user.ts",
+    "cli:create-user": "node dist/cli/create-user.js",
+    "cli:create-user:dev": "ts-node src/cli/create-user.ts",
     "cli:seed-mock": "ts-node src/cli/seed-mock.ts",
     "cli:seed-mock:reset": "ts-node src/cli/seed-mock.ts --reset"
   },

@@ -1,0 +1,96 @@
+name: Deploy to Tencent Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build backend
+        run: |
+          cd backend
+          npm ci
+          npm run build
+
+      - name: Prepare SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          HOST="${DEPLOY_HOST#*@}"
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload and reload
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
+          DEPLOY_WEB_PATH: ${{ secrets.DEPLOY_WEB_PATH }}
+        run: |
+          set -euo pipefail
+          APP="${DEPLOY_APP_PATH:-/opt/classpilot}"
+          WEB="${DEPLOY_WEB_PATH:-/opt/1panel/www/sites/classpilot/index}"
+
+          STAGE="$(mktemp -d)"
+          mkdir -p "$STAGE/web" "$STAGE/backend/dist" "$STAGE/backend/migrations"
+          cp -R frontend/dist/. "$STAGE/web/"
+          cp -R backend/dist/. "$STAGE/backend/dist/"
+          cp -R backend/migrations/. "$STAGE/backend/migrations/"
+          cp backend/package.json backend/package-lock.json backend/.env.example "$STAGE/backend/"
+          cp deploy/ecosystem.config.cjs "$STAGE/"
+
+          (
+            cd "$STAGE"
+            tar cf - .
+          ) | ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes "$DEPLOY_HOST" "set -euo pipefail
+          APP='$APP'
+          WEB='$WEB'
+          TMP=\$(mktemp -d /tmp/classpilot-recv.XXXXXX)
+          trap 'rm -rf \"\$TMP\"' EXIT
+          mkdir -p \"\$TMP\" \"\$WEB\" \"\$APP/backend\" \"\$APP/data\" \"\$APP/uploads\" \"\$APP/backups\" \"\$APP/logs\"
+          tar xf - -C \"\$TMP\"
+          rm -rf \"\$WEB\"
+          mkdir -p \"\$WEB\"
+          cp -R \"\$TMP/web/.\" \"\$WEB/\"
+          rm -rf \"\$APP/backend/dist\" \"\$APP/backend/migrations\"
+          mkdir -p \"\$APP/backend/dist\" \"\$APP/backend/migrations\"
+          cp -R \"\$TMP/backend/dist/.\" \"\$APP/backend/dist/\"
+          cp -R \"\$TMP/backend/migrations/.\" \"\$APP/backend/migrations/\"
+          cp \"\$TMP/backend/package.json\" \"\$TMP/backend/package-lock.json\" \"\$TMP/backend/.env.example\" \"\$APP/backend/\"
+          cp \"\$TMP/ecosystem.config.cjs\" \"\$APP/\"
+          cd \"\$APP/backend\"
+          npm ci --omit=dev
+          pm2 startOrReload \"\$APP/ecosystem.config.cjs\"
+          pm2 save || true
+          echo REMOTE_OK
+          "
+          rm -rf "$STAGE"

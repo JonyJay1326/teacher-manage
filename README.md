@@ -46,15 +46,49 @@ npm run dev
 - 每日 02:30 自动备份 + 设置页手动备份
 - 部署：`deploy/deploy.sh`、`deploy/ecosystem.config.cjs`、`deploy/nginx.conf`
 
-## 部署
+## 部署（1Panel + 公网 IP）
+
+目录约定：
+
+- 前端：`/opt/1panel/www/sites/classpilot/index/`
+- 后端与数据：`/opt/classpilot/`
 
 ```bash
-# 仅本地构建
+# 仅本地构建（Git Bash / WSL）
 bash deploy/deploy.sh
 
-# 同步到服务器（需 SSH）
-DEPLOY_HOST=user@your-server bash deploy/deploy.sh
+# 构建并同步到服务器（需本机已配置 SSH）
+DEPLOY_HOST=ubuntu@你的公网IP bash deploy/deploy.sh
 ```
+
+首次上线还需在服务器写好 `backend/.env`（含 `COOKIE_SECURE=false`）、创建管理员：
+
+```bash
+cd /opt/classpilot/backend
+node dist/cli/create-user.js <username> <password> [displayName]
+```
+
+### GitHub 自动发布（push main）
+
+1. 本机生成**专用**部署密钥（不要用登录密码反复输）：
+
+```bash
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519_classpilot_deploy
+ssh-copy-id -i ~/.ssh/id_ed25519_classpilot_deploy.pub ubuntu@你的公网IP
+```
+
+2. 仓库 **Settings → Secrets and variables → Actions** 新增：
+
+| Name | 值 |
+|------|-----|
+| `DEPLOY_HOST` | `ubuntu@你的公网IP` |
+| `DEPLOY_SSH_KEY` | `~/.ssh/id_ed25519_classpilot_deploy` **私钥全文**（含 `BEGIN`/`END` 行） |
+
+可选：`DEPLOY_APP_PATH`、`DEPLOY_WEB_PATH`（默认已是上面目录）。
+
+3. 把 `.github/workflows/deploy.yml` 推到 `main` 后，每次 push `main` 会自动构建并发布；也可在 Actions 页手动 **Run workflow**。
+
+**不会**覆盖服务器上的 `.env`、`data/`、`uploads/`。
 
 ## 技术栈
 
