@@ -1,0 +1,27 @@
+node_modules/
+dist/
+*.local
+.env
+.env.*
+!.env.example
+
+# 后端数据与密钥（不进 git）
+backend/data/
+data/
+uploads/
+backups/
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 自动生成的类型文件
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts

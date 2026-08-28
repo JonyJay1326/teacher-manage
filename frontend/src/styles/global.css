@@ -1,0 +1,498 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 1200px;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: var(--cp-font-base);
+  line-height: 1.6;
+  color: var(--cp-text-1);
+  background: var(--cp-bg-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
+.cp-card {
+  background: var(--cp-bg-card);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-card);
+  box-shadow: var(--cp-shadow-1);
+}
+
+.cp-card--hoverable {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.cp-card--hoverable:hover {
+  box-shadow: var(--cp-shadow-2);
+  border-color: var(--cp-primary-border);
+  transform: translateY(-4px);
+}
+
+.cp-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-gap-4);
+  margin-bottom: var(--cp-gap-5);
+}
+
+.cp-page-header > a {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cp-page-header__title {
+  margin: 0;
+  font-size: var(--cp-font-lg);
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--cp-text-1);
+  letter-spacing: -0.02em;
+}
+
+.cp-page-header__desc {
+  margin: var(--cp-gap-1) 0 0;
+  font-size: var(--cp-font-sm);
+  color: var(--cp-text-2);
+}
+
+/* 页面英雄横幅（档3）：主操作页可选使用 */
+.cp-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-gap-4);
+  margin-bottom: var(--cp-gap-5);
+  padding: 28px;
+  border-radius: 18px;
+  color: #fff;
+  background: var(--cp-gradient-hero);
+  box-shadow: var(--cp-shadow-3);
+}
+
+.cp-hero__kicker {
+  font-size: var(--cp-font-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.88;
+  margin-bottom: var(--cp-gap-2);
+}
+
+.cp-hero__title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.cp-hero__desc {
+  margin: var(--cp-gap-2) 0 0;
+  max-width: 540px;
+  font-size: var(--cp-font-sm);
+  opacity: 0.92;
+  line-height: 1.5;
+}
+
+.cp-section-title {
+  margin: 0;
+  font-size: var(--cp-font-md);
+  font-weight: 600;
+  color: var(--cp-text-1);
+}
+
+.cp-tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-filter-bar {
+  padding: var(--cp-gap-3) var(--cp-gap-4);
+  margin-bottom: var(--cp-gap-4);
+}
+
+.cp-content-card {
+  padding: 20px 24px;
+}
+
+/* Element Plus 表格覆盖 */
+.el-table {
+  --el-table-header-bg-color: #F1F5F9;
+  --el-table-border-color: var(--cp-divider);
+  --el-table-row-hover-bg-color: var(--cp-primary-bg);
+}
+
+.el-table th.el-table__cell {
+  font-size: var(--cp-font-sm);
+  font-weight: 600;
+  color: var(--cp-text-1);
+}
+
+.el-table td.el-table__cell {
+  font-size: var(--cp-font-base);
+}
+
+.el-button--primary {
+  font-weight: 600;
+}
+
+/* 全局按钮：偶数字号 + 文字与图标在按钮内垂直居中 */
+.el-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--cp-font-button);
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.el-button:not(.is-text):not(.is-link) {
+  height: var(--el-component-size);
+  min-height: var(--el-component-size);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.el-button--large:not(.is-text):not(.is-link) {
+  font-size: var(--cp-font-button-lg);
+  height: var(--el-component-size-large);
+  min-height: var(--el-component-size-large);
+}
+
+.el-button--small:not(.is-text):not(.is-link) {
+  font-size: var(--cp-font-button-sm);
+  height: var(--el-component-size-small);
+  min-height: var(--el-component-size-small);
+}
+
+.el-button.is-text,
+.el-button.is-link {
+  height: auto;
+  min-height: 0;
+  padding: 2px 6px;
+}
+
+.el-button > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  gap: 6px;
+}
+
+/* 全局 Select：避免继承 body line-height 导致选中文案视觉偏上 */
+.el-select__wrapper {
+  min-height: var(--el-component-size);
+  line-height: 1;
+  align-items: center;
+}
+
+.el-select__wrapper.is-large {
+  min-height: var(--el-component-size-large);
+}
+
+.el-select__wrapper.is-small {
+  min-height: var(--el-component-size-small);
+}
+
+.el-select__selection {
+  align-items: center;
+}
+
+.el-select__selected-item {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.el-select__caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.el-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cp-gap-3);
+}
+
+/* 表格行内操作按钮：单行 flex，避免 text/link 按钮换行错位 */
+.cp-table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.cp-table-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+.cp-table-actions .el-button.is-text,
+.cp-table-actions .el-button.is-link {
+  font-size: var(--cp-font-button-sm);
+}
+
+.el-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  height: 26px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.el-tag.el-tag--large {
+  font-size: 16px;
+  height: 32px;
+  padding: 0 12px;
+}
+
+.el-tag.el-tag--small {
+  font-size: 12px;
+  height: 22px;
+  padding: 0 8px;
+}
+
+/* 域色标签：浅底深字，背景更鲜明 */
+.cp-domain-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--cp-radius-tag);
+}
+
+.cp-domain-tag--score {
+  color: var(--cp-domain-score);
+  background: rgba(37, 99, 235, 0.14);
+}
+
+.cp-domain-tag--incident {
+  color: var(--cp-domain-incident);
+  background: rgba(234, 88, 12, 0.14);
+}
+
+.cp-domain-tag--contact {
+  color: var(--cp-domain-contact);
+  background: rgba(5, 150, 105, 0.14);
+}
+
+.cp-domain-tag--comment {
+  color: var(--cp-domain-comment);
+  background: rgba(124, 58, 237, 0.14);
+}
+
+.cp-domain-tag--praise {
+  color: var(--cp-domain-praise);
+  background: rgba(202, 138, 4, 0.16);
+}
+
+.cp-domain-tag--default {
+  color: var(--cp-text-2);
+  background: rgba(100, 116, 139, 0.12);
+}
+
+/* ========== Element Plus 侧边栏菜单 ========== */
+.sidebar-menu.el-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-hover-bg-color: transparent;
+  --el-menu-active-color: var(--cp-primary);
+  --el-menu-text-color: var(--cp-text-2);
+  --el-menu-item-height: 42px;
+  --el-menu-base-level-padding: 16px;
+  --el-menu-icon-width: 22px;
+}
+
+.sidebar-menu .el-menu-item {
+  margin: 2px 10px;
+  border-radius: var(--cp-radius-ctl);
+  font-size: var(--cp-font-base);
+  position: relative;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-menu .el-menu-item .el-icon {
+  font-size: 18px;
+  width: 22px;
+  color: inherit;
+}
+
+.sidebar-menu .el-menu-item:hover:not(.is-active) {
+  background-color: var(--cp-primary-bg);
+  color: var(--cp-primary-active);
+}
+
+.sidebar-menu .el-menu-item.is-active {
+  background: linear-gradient(90deg, #dbeafe 0%, #e0f2fe 100%) !important;
+  color: var(--cp-primary-active) !important;
+  font-weight: 700;
+}
+
+/* 选中态：左侧短竖条，垂直居中，与圆角背景自然融合 */
+.sidebar-menu .el-menu-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--cp-primary);
+}
+
+.sidebar-menu.el-menu--collapse {
+  width: 100%;
+}
+
+.sidebar-menu.el-menu--collapse .el-menu-item {
+  margin: 4px 8px;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Element Plus 折叠态 tooltip 触发层默认有左右 padding，导致图标偏左 */
+.sidebar-menu.el-menu--collapse .el-menu-tooltip__trigger {
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding: 0 !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.sidebar-menu.el-menu--collapse .el-menu-item .el-icon {
+  font-size: 20px;
+  width: 20px !important;
+  margin: 0 !important;
+  margin-right: 0 !important;
+}
+
+.sidebar-menu.el-menu--collapse .el-menu-item.is-active::before {
+  display: none;
+}
+
+.sidebar-menu.el-menu--collapse .el-menu-item.is-active {
+  background: linear-gradient(90deg, #dbeafe 0%, #e0f2fe 100%) !important;
+  border-radius: var(--cp-radius-ctl);
+}
+
+/* 折叠态 tooltip：缩短过渡，减少叠影 */
+.sidebar-menu-tooltip {
+  transition: opacity 0.12s ease !important;
+}
+
+/* ========== 微动画 ========== */
+@keyframes cp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    /* 动画结束后必须清除 transform，否则会创建 fixed 定位包含块并裁剪弹窗 */
+    transform: none;
+  }
+}
+
+.cp-animate-in {
+  animation: cp-fade-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.cp-animate-in--delay-1 { animation-delay: 0.05s; }
+.cp-animate-in--delay-2 { animation-delay: 0.1s; }
+.cp-animate-in--delay-3 { animation-delay: 0.15s; }
+
+/* 状态点波动（双环扩散） */
+@keyframes cp-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.cp-pulse-dot {
+  position: relative;
+  z-index: 0;
+}
+
+.cp-pulse-dot::before,
+.cp-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--cp-pulse-color, var(--cp-danger));
+  pointer-events: none;
+  animation: cp-pulse-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.cp-pulse-dot::after {
+  animation-delay: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-pulse-dot::before,
+  .cp-pulse-dot::after {
+    animation: none;
+  }
+}
+
+.cp-fade-enter-active,
+.cp-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.cp-fade-enter-from,
+.cp-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.el-tabs__item {
+  font-size: var(--cp-font-base);
+  transition: color 0.2s ease;
+}
+
+.el-tabs__active-bar {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-table__row {
+  transition: background-color 0.15s ease;
+}

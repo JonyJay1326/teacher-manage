@@ -1,0 +1,44 @@
+# ClassPilot 班主任班级管理系统 — 开发规则
+
+## 技术栈（白名单，不得擅自替换或新增依赖；新增任何依赖必须说明理由并等用户确认）
+- 前端：Vue 3.5 + <script setup> + TypeScript(strict) + Vite 8 + Pinia 4 + Vue Router 4 + ECharts 6(按需引入) + Element Plus
+- 后端：NestJS + better-sqlite3（手写 SQL，禁用 TypeORM/Prisma）+ class-validator + @nestjs/schedule
+- 部署：Nginx + pm2 + SQLite 文件
+
+## 工程结构
+- 单仓库双目录：backend/（NestJS 标准结构）、frontend/（Vite 标准结构）、deploy/（nginx.conf、deploy.sh、备份脚本）
+- 后端分层强制：Controller（仅参数校验与路由）→ Service（业务）→ Repository（唯一允许 import better-sqlite3 写 SQL 的层）
+- AI 调用只允许出现在 backend/src/modules/ai/ 的 service 中
+- 敏感字段加解密只允许经 backend/src/crypto/ 的统一 helper，且每次读写必须写 audit_logs
+
+## 代码规范
+- TypeScript strict 全程开启；禁止 any（用 unknown + 类型收窄）
+- 所有时间存储与传输：ISO 8601 UTC 字符串；前端展示时本地化
+- API：REST /api/v1/，统一响应 { code, message, data }；错误码分段 1xxx 参数/2xxx 认证/3xxx 业务/5xxx 系统
+- 数据库变更：只通过 backend/migrations/ 编号 SQL 脚本，启动时自动执行；禁止改已应用的迁移文件，只能新增
+- 全表软删除（deleted_at），禁止物理删除业务数据
+- 前端不做响应式适配，布局 min-width: 1200px
+- UI 严格遵循 PRD 附录 D 设计令牌：颜色/间距/圆角/阴影只允许引用 tokens.css 的 --cp-* 变量或 Element 变量；禁止组件内硬编码色值；禁止暗色主题；渐变/阴影档位仅允许附录 D 白名单用途（侧栏 Logo 块、页面英雄横幅、头像点缀、页面氛围底）
+- **弹层强制**：所有 `el-dialog` 必须 `append-to-body` + `align-center`；所有 `el-drawer` 必须 `append-to-body`（`.cp-animate-in` 的 transform / 布局 overflow 会裁切未挂 body 的弹层）
+- **ECharts**：统一用 `components/VChart`；须在容器有有效宽高后 `resize`（Tab/隐藏容器首屏易缩成小图）；用 ResizeObserver，禁止只靠 window.resize
+- ECharts 用 components/VChart 封装，按需注册组件，禁止 import 'echarts' 全量；调色板与域色见附录 D.5
+- 提交信息：Conventional Commits（feat(scores): 键盘导航录入）
+
+## 安全红线（违反即返工）
+- DeepSeek API Key 只存服务器 .env，任何日志、响应、前端代码中不得出现
+- L2 高敏内容（student_sensitive）只存密文，禁止明文写库/写日志
+- uploads/ 文件访问必须走认证接口，禁止 Nginx 静态直出 uploads
+- 所有 /api/v1/** 接口必须过认证守卫（/api/health 除外）
+
+## AI 约定
+- AI 功能全部可失败可降级：DeepSeek 不可用时核心 CRUD 必须完全可用
+- 调用超时 60s，重试 2 次（1s/4s 退避）；结构化抽取用 response_format: json_object
+- 每次调用写 ai_records（tokens + 上下文快照）
+
+## 测试
+- Service 层核心路径单测（vitest）：排名重算、录入聚合保存、AI 上下文组装（token 预算截断）、加密解密往返
+- 三条链路 e2e 必须有：登录、成绩录入保存重算、每日备份
+- 验收场景以 PRD 1.3 节 S1-S6 为标尺
+
+## 需求来源
+- 一切以《班主任班级管理系统-需求文档.md》为准；发现文档矛盾或缺口时，先停下来询问，不要自行发挥

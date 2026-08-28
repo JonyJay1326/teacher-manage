@@ -1,0 +1,106 @@
+/* frontend/src/styles/tokens.css —— 全局唯一令牌定义处 */
+:root {
+  /* 主色（更鲜明的靛蓝） */
+  --cp-primary: #2563EB;
+  --cp-primary-hover: #3B82F6;
+  --cp-primary-active: #1D4ED8;
+  --cp-primary-bg: #DBEAFE;
+  --cp-primary-bg-strong: #BFDBFE;
+  --cp-primary-border: #93C5FD;
+  --cp-accent: #0EA5E9;
+
+  /* 中性色 */
+  --cp-bg-page: #F3F7FF;
+  --cp-bg-card: #FFFFFF;
+  --cp-border: #C7D2FE;
+  --cp-divider: #E2E8F0;
+  --cp-text-1: #0F172A;
+  --cp-text-2: #475569;
+  --cp-text-3: #64748B;
+
+  /* 功能色（饱和度更高） */
+  --cp-success: #059669;
+  --cp-success-bg: #D1FAE5;
+  --cp-warning: #EA580C;
+  --cp-warning-bg: #FFEDD5;
+  --cp-danger: #DC2626;
+  --cp-danger-bg: #FEE2E2;
+
+  /* 业务域色 */
+  --cp-domain-score: #2563EB;
+  --cp-domain-incident: #EA580C;
+  --cp-domain-contact: #059669;
+  --cp-domain-comment: #7C3AED;
+  --cp-domain-praise: #CA8A04;
+
+  /* 事件严重度 */
+  --cp-sev-1: #64748B;
+  --cp-sev-2: #EA580C;
+  --cp-sev-3: #DC2626;
+
+  /* 阴影（三档：卡片 / 抬起 / 英雄区） */
+  --cp-shadow-1: 0 4px 14px rgba(37, 99, 235, 0.08);
+  --cp-shadow-2: 0 14px 36px rgba(37, 99, 235, 0.12);
+  --cp-shadow-3: 0 18px 40px rgba(37, 99, 235, 0.28);
+
+  /* 圆角 */
+  --cp-radius-card: 16px;
+  --cp-radius-ctl: 10px;
+  --cp-radius-tag: 999px;
+  --cp-radius-modal: 16px;
+
+  /* 允许的品牌渐变（仅侧栏 Logo 块 / 页面英雄横幅 / 头像点缀） */
+  --cp-gradient-brand: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%);
+  --cp-gradient-hero: linear-gradient(120deg, #2563EB 0%, #1D4ED8 42%, #0EA5E9 100%);
+  --cp-gradient-avatar: linear-gradient(135deg, #2563EB, #38BDF8);
+  --cp-page-atmosphere:
+    radial-gradient(1000px 420px at 90% -5%, rgba(14, 165, 233, 0.14), transparent 55%),
+    radial-gradient(800px 360px at 8% 0%, rgba(37, 99, 235, 0.12), transparent 50%),
+    var(--cp-bg-page);
+
+  /* 间距（4px 网格） */
+  --cp-gap-1: 4px;
+  --cp-gap-2: 8px;
+  --cp-gap-3: 12px;
+  --cp-gap-4: 16px;
+  --cp-gap-5: 24px;
+  --cp-gap-6: 32px;
+
+  /* 字号阶梯（整体放大一档） */
+  --cp-font-xs: 13px;
+  --cp-font-sm: 14px;
+  --cp-font-base: 15px;
+  --cp-font-md: 18px;
+  --cp-font-lg: 22px;
+
+  /* 按钮专用偶数字号，避免奇数 px 在 flex 居中时视觉偏上/偏下 */
+  --cp-font-button: 16px;
+  --cp-font-button-sm: 14px;
+  --cp-font-button-lg: 18px;
+
+  /* Element Plus 主题绑定 */
+  --el-color-primary: var(--cp-primary);
+  --el-color-primary-light-3: #60A5FA;
+  --el-color-primary-light-5: #93C5FD;
+  --el-color-primary-light-7: #BFDBFE;
+  --el-color-primary-light-8: #DBEAFE;
+  --el-color-primary-light-9: #EFF6FF;
+  --el-color-primary-dark-2: var(--cp-primary-active);
+  --el-color-success: var(--cp-success);
+  --el-color-warning: var(--cp-warning);
+  --el-color-danger: var(--cp-danger);
+  --el-border-color: var(--cp-border);
+  --el-border-color-light: var(--cp-divider);
+  --el-border-radius-base: var(--cp-radius-ctl);
+  --el-text-color-primary: var(--cp-text-1);
+  --el-text-color-regular: var(--cp-text-2);
+  --el-text-color-placeholder: var(--cp-text-3);
+  --el-fill-color-blank: var(--cp-bg-card);
+  --el-font-size-base: var(--cp-font-base);
+  --el-font-size-small: var(--cp-font-sm);
+
+  /* 与 16px 按钮字号匹配的控件高度，避免按钮内文字视觉偏上 */
+  --el-component-size: 36px;
+  --el-component-size-large: 40px;
+  --el-component-size-small: 28px;
+}
