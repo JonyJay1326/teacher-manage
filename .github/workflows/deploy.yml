@@ -42,13 +42,29 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
+          set -euo pipefail
+          if [[ -z "${DEPLOY_HOST:-}" ]]; then
+            echo "::error::缺少 Secret DEPLOY_HOST（例如 ubuntu@115.159.190.215）"
+            exit 1
+          fi
+          if [[ -z "${DEPLOY_SSH_KEY:-}" ]]; then
+            echo "::error::缺少 Secret DEPLOY_SSH_KEY（部署私钥全文，含 BEGIN/END 行）"
+            exit 1
+          fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          # 统一换行，避免 Windows 粘贴私钥导致 OpenSSH 拒读
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           HOST="${DEPLOY_HOST#*@}"
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          if [[ -z "$HOST" || "$HOST" == "$DEPLOY_HOST" && "$DEPLOY_HOST" != *@* ]]; then
+            # 允许只填 IP，此时 DEPLOY_HOST 应为 user@ip；此处仅校验 HOST 非空
+            true
+          fi
+          ssh-keyscan -T 10 -H "$HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 \
+            "$DEPLOY_HOST" "echo SSH_OK && command -v pm2 && pm2 -v"
 
       - name: Upload and reload
         env:
@@ -68,16 +84,17 @@ jobs:
           cp backend/package.json backend/package-lock.json backend/.env.example "$STAGE/backend/"
           cp deploy/ecosystem.config.cjs "$STAGE/"
 
+          # gzip 压缩上传（轻量机带宽有限）；远端仅在 lock 变化时 npm ci
           (
             cd "$STAGE"
-            tar cf - .
+            tar czf - .
           ) | ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes "$DEPLOY_HOST" "set -euo pipefail
           APP='$APP'
           WEB='$WEB'
           TMP=\$(mktemp -d /tmp/classpilot-recv.XXXXXX)
           trap 'rm -rf \"\$TMP\"' EXIT
           mkdir -p \"\$TMP\" \"\$WEB\" \"\$APP/backend\" \"\$APP/data\" \"\$APP/uploads\" \"\$APP/backups\" \"\$APP/logs\"
-          tar xf - -C \"\$TMP\"
+          tar xzf - -C \"\$TMP\"
           rm -rf \"\$WEB\"
           mkdir -p \"\$WEB\"
           cp -R \"\$TMP/web/.\" \"\$WEB/\"
@@ -88,7 +105,14 @@ jobs:
           cp \"\$TMP/backend/package.json\" \"\$TMP/backend/package-lock.json\" \"\$TMP/backend/.env.example\" \"\$APP/backend/\"
           cp \"\$TMP/ecosystem.config.cjs\" \"\$APP/\"
           cd \"\$APP/backend\"
-          npm ci --omit=dev
+          LOCK_HASH=\$(sha256sum package-lock.json | awk '{print \$1}')
+          if [[ -d node_modules && -f .deps-lock-sha256 && \"\$(cat .deps-lock-sha256)\" == \"\$LOCK_HASH\" ]]; then
+            echo '跳过 npm ci（package-lock 未变）'
+          else
+            echo '执行 npm ci --omit=dev（依赖有变更或首次安装）'
+            npm ci --omit=dev
+            echo \"\$LOCK_HASH\" > .deps-lock-sha256
+          fi
           pm2 startOrReload \"\$APP/ecosystem.config.cjs\"
           pm2 save || true
           echo REMOTE_OK

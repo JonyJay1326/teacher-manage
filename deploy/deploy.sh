@@ -83,17 +83,17 @@ echo "==> 同步到 $DEPLOY_HOST（一次 SSH，输入一次密码）"
 echo "    前端 → $DEPLOY_WEB_PATH"
 echo "    后端 → $DEPLOY_APP_PATH/backend"
 
-# 远端：解压 → 覆盖站点与后端 → 装依赖 → pm2（不触碰 .env / data / uploads）
+# 远端：解压 → 覆盖站点与后端 → 装依赖（lock 未变则跳过）→ pm2
 (
   cd "$STAGE"
-  tar cf - .
+  tar czf - .
 ) | ssh "$DEPLOY_HOST" "set -euo pipefail
 APP='$DEPLOY_APP_PATH'
 WEB='$DEPLOY_WEB_PATH'
 TMP=\$(mktemp -d /tmp/classpilot-recv.XXXXXX)
 trap 'rm -rf \"\$TMP\"' EXIT
 mkdir -p \"\$TMP\" \"\$WEB\" \"\$APP/backend\" \"\$APP/data\" \"\$APP/uploads\" \"\$APP/backups\" \"\$APP/logs\"
-tar xf - -C \"\$TMP\"
+tar xzf - -C \"\$TMP\"
 rm -rf \"\$WEB\"
 mkdir -p \"\$WEB\"
 cp -R \"\$TMP/web/.\" \"\$WEB/\"
@@ -104,7 +104,14 @@ cp -R \"\$TMP/backend/migrations/.\" \"\$APP/backend/migrations/\"
 cp \"\$TMP/backend/package.json\" \"\$TMP/backend/package-lock.json\" \"\$TMP/backend/.env.example\" \"\$APP/backend/\"
 cp \"\$TMP/ecosystem.config.cjs\" \"\$APP/\"
 cd \"\$APP/backend\"
-npm ci --omit=dev
+LOCK_HASH=\$(sha256sum package-lock.json | awk '{print \$1}')
+if [[ -d node_modules && -f .deps-lock-sha256 && \"\$(cat .deps-lock-sha256)\" == \"\$LOCK_HASH\" ]]; then
+  echo '跳过 npm ci（package-lock 未变）'
+else
+  echo '执行 npm ci --omit=dev（依赖有变更或首次安装）'
+  npm ci --omit=dev
+  echo \"\$LOCK_HASH\" > .deps-lock-sha256
+fi
 if command -v pm2 >/dev/null 2>&1; then
   pm2 startOrReload \"\$APP/ecosystem.config.cjs\"
   pm2 save || true
