@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart, RadarChart, HeatmapChart, PieChart } from 'echarts/charts';
+import { LineChart, BarChart, RadarChart, HeatmapChart, PieChart, ScatterChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -20,6 +20,7 @@ echarts.use([
   RadarChart,
   HeatmapChart,
   PieChart,
+  ScatterChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,

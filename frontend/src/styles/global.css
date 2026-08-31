@@ -292,27 +292,27 @@ body {
 
 .cp-domain-tag--score {
   color: var(--cp-domain-score);
-  background: rgba(37, 99, 235, 0.14);
+  background: rgba(91, 156, 255, 0.14);
 }
 
 .cp-domain-tag--incident {
   color: var(--cp-domain-incident);
-  background: rgba(234, 88, 12, 0.14);
+  background: rgba(255, 122, 154, 0.14);
 }
 
 .cp-domain-tag--contact {
   color: var(--cp-domain-contact);
-  background: rgba(5, 150, 105, 0.14);
+  background: rgba(61, 207, 154, 0.14);
 }
 
 .cp-domain-tag--comment {
   color: var(--cp-domain-comment);
-  background: rgba(124, 58, 237, 0.14);
+  background: rgba(155, 140, 255, 0.14);
 }
 
 .cp-domain-tag--praise {
   color: var(--cp-domain-praise);
-  background: rgba(202, 138, 4, 0.16);
+  background: rgba(245, 185, 66, 0.16);
 }
 
 .cp-domain-tag--default {

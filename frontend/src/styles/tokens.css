@@ -26,12 +26,12 @@
   --cp-danger: #DC2626;
   --cp-danger-bg: #FEE2E2;
 
-  /* 业务域色 */
-  --cp-domain-score: #2563EB;
-  --cp-domain-incident: #EA580C;
-  --cp-domain-contact: #059669;
-  --cp-domain-comment: #7C3AED;
-  --cp-domain-praise: #CA8A04;
+  /* 业务域色（与软几何图表色板对齐，见附录 D.5） */
+  --cp-domain-score: #5B9CFF;
+  --cp-domain-incident: #FF7A9A;
+  --cp-domain-contact: #3DCF9A;
+  --cp-domain-comment: #9B8CFF;
+  --cp-domain-praise: #F5B942;
 
   /* 事件严重度 */
   --cp-sev-1: #64748B;

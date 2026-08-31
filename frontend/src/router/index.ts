@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/chart-styles',
+      name: 'ChartStyles',
+      component: () => import('@/views/preview/ChartStylesPreviewView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/scores/exams/:id/enter',
       name: 'ScoreEntry',
       component: () => import('@/views/scores/ScoreEntryView.vue'),

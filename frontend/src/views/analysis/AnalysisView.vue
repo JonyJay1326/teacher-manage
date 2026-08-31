@@ -4,16 +4,25 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import type { EChartsOption } from 'echarts';
 import VChart from '@/components/VChart.vue';
+import SubjectScoreScatter from '@/components/SubjectScoreScatter.vue';
 import { ApiError } from '@/api/http';
 import {
   analysisOverviewApi,
   type AnalysisOverview,
 } from '@/api/analysis';
-import { listExamsApi } from '@/api/scores';
-import type { Exam } from '@/types';
+import { getExamMatrixApi, listExamsApi } from '@/api/scores';
+import type { Exam, ExamScoreRow, Subject } from '@/types';
+import {
+  CHART_COLORS,
+  CHART_HEAT_COLORS,
+  CHART_NEGATIVE,
+  CHART_POSITIVE,
+  CHART_STYLE,
+  chartTooltip,
+} from '@/constants/chart';
 
-/** ECharts 调色板（附录 D.5） */
-const chartPalette = ['#3D6FE8', '#ED8B33', '#33A675', '#8B5CF6', '#D4A017', '#8F959E'];
+/** 软几何调色板（附录 D.5） */
+const chartPalette = [...CHART_COLORS];
 
 const router = useRouter();
 const loading = ref(false);
@@ -21,6 +30,9 @@ const overview = ref<AnalysisOverview | null>(null);
 const exams = ref<Exam[]>([]);
 const selectedExamId = ref<number | undefined>(undefined);
 const selectedSubjectId = ref<number | undefined>(undefined);
+const scatterSubjects = ref<Subject[]>([]);
+const scatterRows = ref<ExamScoreRow[]>([]);
+const scatterLoading = ref(false);
 
 /** 加载分析数据 */
 async function loadOverview(): Promise<void> {
@@ -49,6 +61,26 @@ async function loadOverview(): Promise<void> {
   }
 }
 
+/** 加载考试矩阵供各科气泡图 */
+async function loadScatterMatrix(examId: number | undefined): Promise<void> {
+  if (examId === undefined) {
+    scatterSubjects.value = [];
+    scatterRows.value = [];
+    return;
+  }
+  scatterLoading.value = true;
+  try {
+    const matrix = await getExamMatrixApi(examId);
+    scatterSubjects.value = matrix.subjects;
+    scatterRows.value = matrix.rows;
+  } catch {
+    scatterSubjects.value = [];
+    scatterRows.value = [];
+  } finally {
+    scatterLoading.value = false;
+  }
+}
+
 /** 加载考试下拉 */
 async function loadExams(): Promise<void> {
   try {
@@ -62,7 +94,7 @@ async function loadExams(): Promise<void> {
 async function onExamChange(examId: number | undefined): Promise<void> {
   selectedExamId.value = examId;
   selectedSubjectId.value = undefined;
-  await loadOverview();
+  await Promise.all([loadOverview(), loadScatterMatrix(examId)]);
 }
 
 /** 切换直方图科目 */
@@ -92,7 +124,13 @@ const trendOption = computed<EChartsOption>(() => {
       symbol: 'circle',
       symbolSize: 8,
       lineStyle: { width: 3, color: chartPalette[0] },
-      itemStyle: { color: chartPalette[0] },
+      itemStyle: {
+        color: chartPalette[0],
+        borderColor: '#fff',
+        borderWidth: 2,
+        shadowBlur: 8,
+        shadowColor: CHART_STYLE.shadowColor,
+      },
     },
   ];
   if (hasGrade) {
@@ -109,19 +147,26 @@ const trendOption = computed<EChartsOption>(() => {
   }
   return {
     color: chartPalette,
-    tooltip: { trigger: 'axis' },
-    legend: { bottom: 0 },
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({ trigger: 'axis' }),
+    legend: {
+      bottom: 0,
+      textStyle: { color: CHART_STYLE.muted, fontSize: 12 },
+    },
     grid: { left: 48, right: 24, top: 32, bottom: 48 },
     xAxis: {
       type: 'category',
       data: points.map((p) => p.examName),
-      axisLabel: { color: '#475569', fontSize: 12 },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: CHART_STYLE.axis } },
+      axisLabel: { color: CHART_STYLE.muted, fontSize: 12 },
     },
     yAxis: {
       type: 'value',
       name: '总分',
-      axisLabel: { color: '#64748B' },
-      splitLine: { lineStyle: { color: '#E2E8F0' } },
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
     },
     series,
   };
@@ -131,40 +176,52 @@ const trendOption = computed<EChartsOption>(() => {
 const ratesOption = computed<EChartsOption>(() => {
   const items = overview.value?.subjectRates.items ?? [];
   return {
-    color: [chartPalette[1], chartPalette[2], chartPalette[0]],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { bottom: 0 },
+    color: [CHART_NEGATIVE, CHART_POSITIVE, chartPalette[0]],
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({ trigger: 'axis', axisPointer: { type: 'shadow' } }),
+    legend: {
+      bottom: 0,
+      textStyle: { color: CHART_STYLE.muted, fontSize: 12 },
+    },
     grid: { left: 48, right: 24, top: 32, bottom: 48 },
     xAxis: {
       type: 'category',
       data: items.map((i) => i.subjectName),
-      axisLabel: { color: '#475569' },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: CHART_STYLE.axis } },
+      axisLabel: { color: CHART_STYLE.muted },
     },
     yAxis: {
       type: 'value',
       name: '%',
       max: 100,
-      axisLabel: { color: '#64748B' },
-      splitLine: { lineStyle: { color: '#E2E8F0' } },
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
     },
     series: [
       {
         name: '低分率',
         type: 'bar',
         data: items.map((i) => i.lowRate),
-        barMaxWidth: 28,
+        barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
+        barGap: CHART_STYLE.barGap,
+        barCategoryGap: CHART_STYLE.barCategoryGap,
+        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
       },
       {
         name: '及格率',
         type: 'bar',
         data: items.map((i) => i.passRate),
-        barMaxWidth: 28,
+        barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
+        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
       },
       {
         name: '优秀率',
         type: 'bar',
         data: items.map((i) => i.excellentRate),
-        barMaxWidth: 28,
+        barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
+        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
       },
     ],
   };
@@ -184,7 +241,8 @@ const moversOption = computed((): EChartsOption => {
     ...decline.map((m) => m.delta),
   ];
   return {
-    tooltip: {
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params: unknown) => {
@@ -197,18 +255,21 @@ const moversOption = computed((): EChartsOption => {
         const dir = item.delta > 0 ? '进步' : '退步';
         return `${item.name}<br/>${dir} ${Math.abs(item.delta)} 名<br/>第${item.prevRank} → 第${item.currRank}名<br/>总分 ${item.currTotal}`;
       },
-    },
+    }),
     grid: { left: 72, right: 32, top: 16, bottom: 24 },
     xAxis: {
       type: 'value',
       name: '名次变化',
-      axisLabel: { color: '#64748B' },
-      splitLine: { lineStyle: { color: '#E2E8F0' } },
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
     },
     yAxis: {
       type: 'category',
       data: names,
-      axisLabel: { color: '#0F172A' },
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.text, fontWeight: 600 },
     },
     series: [
       {
@@ -216,13 +277,19 @@ const moversOption = computed((): EChartsOption => {
         data: deltas.map((d) => ({
           value: d,
           itemStyle: {
-            color: d > 0 ? chartPalette[2] : chartPalette[1],
+            color: d > 0 ? CHART_POSITIVE : CHART_NEGATIVE,
+            borderRadius: CHART_STYLE.hBarRadius,
+            shadowBlur: 8,
+            shadowColor: CHART_STYLE.shadowColor,
           },
         })),
-        barMaxWidth: 22,
+        barWidth: CHART_STYLE.hBarWidth,
+        barMaxWidth: CHART_STYLE.hBarMaxWidth,
+        barCategoryGap: CHART_STYLE.barCategoryGap,
         label: {
           show: true,
           position: 'right',
+          color: CHART_STYLE.muted,
           formatter: (p: { value?: unknown }) => {
             const v = Number(p.value ?? 0);
             return v > 0 ? `+${v}` : String(v);
@@ -250,15 +317,27 @@ const focusFreqOption = computed<EChartsOption>(() => {
   const incidents = items.map((i) => i.incidentCount).reverse();
   const contacts = items.map((i) => i.contactCount).reverse();
   return {
-    color: [chartPalette[1], chartPalette[2]],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { bottom: 0 },
+    color: [chartPalette[2], chartPalette[1]],
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({ trigger: 'axis', axisPointer: { type: 'shadow' } }),
+    legend: {
+      bottom: 0,
+      textStyle: { color: CHART_STYLE.muted, fontSize: 12 },
+    },
     grid: { left: 72, right: 24, top: 16, bottom: 40 },
-    xAxis: { type: 'value', minInterval: 1 },
+    xAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
+    },
     yAxis: {
       type: 'category',
       data: names,
-      axisLabel: { fontSize: 12 },
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: { fontSize: 12, color: CHART_STYLE.text, fontWeight: 600 },
     },
     series: [
       {
@@ -266,14 +345,20 @@ const focusFreqOption = computed<EChartsOption>(() => {
         type: 'bar',
         stack: 'total',
         data: incidents,
-        barMaxWidth: 18,
+        barWidth: CHART_STYLE.hBarWidth,
+        barMaxWidth: CHART_STYLE.hBarMaxWidth,
+        barCategoryGap: CHART_STYLE.barCategoryGap,
       },
       {
         name: '家校沟通',
         type: 'bar',
         stack: 'total',
         data: contacts,
-        barMaxWidth: 18,
+        barWidth: CHART_STYLE.hBarWidth,
+        barMaxWidth: CHART_STYLE.hBarMaxWidth,
+        itemStyle: {
+          borderRadius: CHART_STYLE.hBarRadius,
+        },
       },
     ],
   };
@@ -291,14 +376,15 @@ const contactHeatOption = computed<EChartsOption>(() => {
   if (!heat?.rangeStart) return {};
   const max = Math.max(heat.maxCount, 1);
   return {
-    tooltip: {
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({
       formatter: (p: unknown) => {
         const item = p as { value?: [string, number] };
         const v = item.value;
         if (!v) return '';
         return `${v[0]}<br/>沟通 ${v[1]} 次`;
       },
-    },
+    }),
     visualMap: {
       min: 0,
       max,
@@ -307,9 +393,9 @@ const contactHeatOption = computed<EChartsOption>(() => {
       left: 'center',
       bottom: 8,
       inRange: {
-        color: ['#DBEAFE', '#93C5FD', '#3D6FE8', '#1E40AF'],
+        color: [...CHART_HEAT_COLORS],
       },
-      textStyle: { color: '#475569' },
+      textStyle: { color: CHART_STYLE.muted },
     },
     calendar: {
       top: 48,
@@ -321,10 +407,11 @@ const contactHeatOption = computed<EChartsOption>(() => {
       itemStyle: {
         borderWidth: 2,
         borderColor: '#FFFFFF',
+        borderRadius: 4,
       },
       yearLabel: { show: false },
-      dayLabel: { firstDay: 1, nameMap: 'cn', color: '#64748B' },
-      monthLabel: { nameMap: 'cn', color: '#334155' },
+      dayLabel: { firstDay: 1, nameMap: 'cn', color: CHART_STYLE.muted },
+      monthLabel: { nameMap: 'cn', color: CHART_STYLE.text },
       splitLine: { show: false },
     },
     series: [
@@ -342,15 +429,35 @@ const categoryPieOption = computed<EChartsOption>(() => {
   const items = overview.value?.categoryDistribution?.items ?? [];
   return {
     color: chartPalette,
-    tooltip: { trigger: 'item', formatter: '{b}: {c}（{d}%）' },
-    legend: { bottom: 0, type: 'scroll' },
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({
+      trigger: 'item',
+      formatter: '{b}: {c}（{d}%）',
+    }),
+    legend: {
+      bottom: 0,
+      type: 'scroll',
+      textStyle: { color: CHART_STYLE.muted, fontSize: 12 },
+    },
     series: [
       {
         type: 'pie',
-        radius: ['42%', '68%'],
+        radius: CHART_STYLE.pieRadius,
         center: ['50%', '46%'],
+        padAngle: CHART_STYLE.piePadAngle,
         data: items.map((i) => ({ name: i.category, value: i.count })),
-        label: { formatter: '{b}\n{d}%' },
+        itemStyle: {
+          borderRadius: CHART_STYLE.pieBorderRadius,
+          borderColor: '#fff',
+          borderWidth: CHART_STYLE.pieBorderWidth,
+          shadowBlur: 8,
+          shadowColor: CHART_STYLE.shadowColor,
+        },
+        label: {
+          color: CHART_STYLE.text,
+          fontSize: 11,
+          formatter: '{b}\n{d}%',
+        },
       },
     ],
   };
@@ -361,19 +468,53 @@ const histogramOption = computed<EChartsOption>(() => {
   const bins = overview.value?.subjectHistogram?.bins ?? [];
   return {
     color: [chartPalette[0]],
-    tooltip: { trigger: 'axis' },
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({ trigger: 'axis' }),
     grid: { left: 48, right: 16, top: 24, bottom: 48 },
     xAxis: {
       type: 'category',
       data: bins.map((b) => b.label),
-      axisLabel: { rotate: 30, fontSize: 11 },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: CHART_STYLE.axis } },
+      axisLabel: { rotate: 30, fontSize: 11, color: CHART_STYLE.muted },
     },
-    yAxis: { type: 'value', minInterval: 1, name: '人数' },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      name: '人数',
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
+    },
     series: [
       {
         type: 'bar',
         data: bins.map((b) => b.count),
-        barMaxWidth: 36,
+        barWidth: CHART_STYLE.barWidth,
+        barMaxWidth: CHART_STYLE.barMaxWidth,
+        barCategoryGap: CHART_STYLE.barCategoryGap,
+        showBackground: true,
+        backgroundStyle: {
+          color: CHART_STYLE.barTrack,
+          borderRadius: CHART_STYLE.capsuleRadius,
+        },
+        itemStyle: {
+          borderRadius: CHART_STYLE.capsuleRadius,
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: CHART_STYLE.barGradientTop },
+              { offset: 1, color: chartPalette[0] },
+            ],
+          },
+          shadowBlur: CHART_STYLE.shadowBlur,
+          shadowColor: CHART_STYLE.shadowColor,
+          shadowOffsetY: 3,
+        },
       },
     ],
   };
@@ -384,21 +525,38 @@ const monthlyOption = computed<EChartsOption>(() => {
   const points = overview.value?.incidentMonthly?.points ?? [];
   return {
     color: [chartPalette[3]],
-    tooltip: { trigger: 'axis' },
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({ trigger: 'axis' }),
     grid: { left: 48, right: 24, top: 24, bottom: 40 },
     xAxis: {
       type: 'category',
       data: points.map((p) => p.month),
-      axisLabel: { rotate: 40, fontSize: 11 },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: CHART_STYLE.axis } },
+      axisLabel: { rotate: 40, fontSize: 11, color: CHART_STYLE.muted },
     },
-    yAxis: { type: 'value', minInterval: 1, name: '件数' },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      name: '件数',
+      axisLine: { show: false },
+      axisLabel: { color: CHART_STYLE.muted },
+      splitLine: { show: false },
+    },
     series: [
       {
         type: 'line',
         data: points.map((p) => p.count),
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: 7,
+        lineStyle: { width: 3 },
+        itemStyle: {
+          borderColor: '#fff',
+          borderWidth: 2,
+          shadowBlur: 8,
+          shadowColor: CHART_STYLE.shadowColor,
+        },
         areaStyle: { opacity: 0.12 },
       },
     ],
@@ -406,8 +564,11 @@ const monthlyOption = computed<EChartsOption>(() => {
 });
 
 onMounted(() => {
-  void loadExams();
-  void loadOverview();
+  void (async () => {
+    await loadExams();
+    await loadOverview();
+    await loadScatterMatrix(selectedExamId.value);
+  })();
 });
 </script>
 
@@ -644,6 +805,39 @@ onMounted(() => {
         height="300px"
       />
       <el-empty v-else description="请选择考试与科目查看分布" :image-size="72" />
+    </section>
+
+    <!-- ⑦b 各科气泡分布 -->
+    <section class="analysis__section cp-card" v-loading="scatterLoading">
+      <div class="analysis__section-head">
+        <div>
+          <h3 class="cp-section-title">各科成绩气泡分布</h3>
+          <p class="analysis__hint">
+            与上方同一考试：气泡位置=分数、大小=同分人数；悬停显示姓名；左侧红字为班均分
+          </p>
+        </div>
+        <div class="analysis__filters">
+          <el-select
+            :model-value="selectedExamId"
+            placeholder="考试"
+            style="width: 200px"
+            @change="onExamChange"
+          >
+            <el-option
+              v-for="exam in exams"
+              :key="`scatter-${exam.id}`"
+              :label="exam.name"
+              :value="exam.id"
+            />
+          </el-select>
+        </div>
+      </div>
+      <SubjectScoreScatter
+        v-if="scatterSubjects.length > 0"
+        :subjects="scatterSubjects"
+        :rows="scatterRows"
+      />
+      <el-empty v-else description="请选择有成绩的考试" :image-size="72" />
     </section>
 
     <!-- ⑧ 月度趋势 -->

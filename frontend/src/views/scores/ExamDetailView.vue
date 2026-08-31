@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ApiError } from '@/api/http';
 import { getExamApi, getExamMatrixApi } from '@/api/scores';
+import SubjectScoreScatter from '@/components/SubjectScoreScatter.vue';
 import type { Exam, ExamScoreRow, Subject, SubjectScoreCell } from '@/types';
 
 const route = useRoute();
@@ -140,6 +141,13 @@ onMounted(() => {
       </div>
     </div>
 
+    <div class="cp-card cp-content-card exam-detail__scatter-card">
+      <div class="exam-detail__table-hint">
+        各科成绩分布 · 气泡位置为分数，大小为同分人数 · 悬停查看姓名 · 左侧红字为班均分
+      </div>
+      <SubjectScoreScatter :subjects="subjects" :rows="scoreRows" />
+    </div>
+
     <div class="cp-card cp-content-card exam-detail__table-card">
       <div class="exam-detail__table-hint">
         全科成绩总表 · 共 {{ scoreRows.length }} 人 · {{ subjects.length }} 科 · 点击各科/总分列头排序
@@ -212,6 +220,10 @@ onMounted(() => {
   align-items: center;
   gap: var(--cp-gap-2);
   flex-shrink: 0;
+}
+
+.exam-detail__scatter-card {
+  margin-bottom: var(--cp-gap-5);
 }
 
 .exam-detail__table-card {

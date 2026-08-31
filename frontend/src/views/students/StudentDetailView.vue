@@ -5,6 +5,11 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Lock, Unlock } from '@element-plus/icons-vue';
 import VChart from '@/components/VChart.vue';
 import type { EChartsOption } from 'echarts';
+import {
+  CHART_COLORS,
+  CHART_STYLE,
+  chartTooltip,
+} from '@/constants/chart';
 import { ApiError } from '@/api/http';
 import {
   createGuardianApi,
@@ -862,7 +867,7 @@ async function handleDeleteGuardian(guardian: GuardianDto): Promise<void> {
   }
 }
 
-/** 雷达图配置（该生 vs 班均 · 蓝色科技风） */
+/** 雷达图配置（该生 vs 班均 · 软几何） */
 const radarOption = computed<EChartsOption>(() => {
   const data = latestExamScores.value;
   if (!data || data.subjects.length === 0) {
@@ -878,17 +883,18 @@ const radarOption = computed<EChartsOption>(() => {
   const classValues = data.subjects.map(
     (subject) => data.classAvgs[subject.id] ?? 0,
   );
+  const primary = CHART_COLORS[0];
+  const secondary = CHART_COLORS[1];
   return {
-    color: ['#2563EB', '#0EA5E9'],
-    tooltip: {
+    color: [primary, secondary],
+    animationDuration: CHART_STYLE.animationDuration,
+    tooltip: chartTooltip({
       trigger: 'item',
       appendToBody: true,
       confine: false,
-      backgroundColor: '#FFFFFF',
-      borderColor: '#C7D2FE',
-      borderWidth: 1,
-      textStyle: { color: '#0F172A', fontSize: 13 },
-      extraCssText: 'box-shadow: 0 14px 36px rgba(37, 99, 235, 0.12); border-radius: 8px; z-index: 4000;',
+      textStyle: { color: CHART_STYLE.text, fontSize: 13 },
+      extraCssText:
+        'box-shadow: 0 14px 36px rgba(91, 156, 255, 0.16); border-radius: 12px; z-index: 4000;',
       /** 数值统一保留两位小数 */
       formatter: (params: unknown) => {
         const p = params as {
@@ -906,13 +912,13 @@ const radarOption = computed<EChartsOption>(() => {
         });
         return `${p.name ?? ''}<br/>${lines.join('<br/>')}`;
       },
-    },
+    }),
     legend: {
       bottom: 8,
       itemWidth: 12,
       itemHeight: 12,
       icon: 'roundRect',
-      textStyle: { fontSize: 14, color: '#475569' },
+      textStyle: { fontSize: 14, color: CHART_STYLE.muted },
     },
     radar: {
       center: ['50%', '48%'],
@@ -923,12 +929,12 @@ const radarOption = computed<EChartsOption>(() => {
       })),
       axisName: {
         fontSize: 13,
-        color: '#1D4ED8',
+        color: primary,
         fontWeight: 600,
         padding: [3, 4],
       },
       axisLine: {
-        lineStyle: { color: 'rgba(37, 99, 235, 0.35)', width: 1 },
+        lineStyle: { color: 'rgba(91, 156, 255, 0.35)', width: 1 },
       },
       splitLine: {
         lineStyle: { color: 'rgba(147, 197, 253, 0.55)', width: 1 },
@@ -954,24 +960,26 @@ const radarOption = computed<EChartsOption>(() => {
           {
             value: studentValues,
             name: '该生',
-            lineStyle: { color: '#2563EB', width: 2.5 },
+            lineStyle: { color: primary, width: 2.5 },
             itemStyle: {
-              color: '#2563EB',
+              color: primary,
               borderColor: '#FFFFFF',
               borderWidth: 2,
+              shadowBlur: 8,
+              shadowColor: CHART_STYLE.shadowColor,
             },
-            areaStyle: { color: 'rgba(37, 99, 235, 0.28)' },
+            areaStyle: { color: 'rgba(91, 156, 255, 0.28)' },
           },
           {
             value: classValues,
             name: '班均',
-            lineStyle: { color: '#0EA5E9', width: 2, type: 'dashed' },
+            lineStyle: { color: secondary, width: 2, type: 'dashed' },
             itemStyle: {
-              color: '#0EA5E9',
+              color: secondary,
               borderColor: '#FFFFFF',
               borderWidth: 2,
             },
-            areaStyle: { color: 'rgba(14, 165, 233, 0.12)' },
+            areaStyle: { color: 'rgba(61, 207, 154, 0.12)' },
           },
         ],
       },
