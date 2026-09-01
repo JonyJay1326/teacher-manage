@@ -1,21 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, inject } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { EditPen } from '@element-plus/icons-vue';
 import { ApiError } from '@/api/http';
-import { dashboardHomeApi } from '@/api/dashboard';
+import { dashboardHomeApi, type ScoreBrief } from '@/api/dashboard';
 import WeeklyScheduleCard from '@/components/WeeklyScheduleCard.vue';
+import ScoreBriefSection from '@/components/ScoreBriefSection.vue';
 import type { Student } from '@/types';
 import type { IncidentListItem } from '@/api/incidents';
 
 const router = useRouter();
-const openQuickNote = inject<() => void>('openQuickNote');
 
 const focusStudents = ref<Student[]>([]);
 const draftCount = ref(0);
 const dueFollowUps = ref<IncidentListItem[]>([]);
 const recentDrafts = ref<IncidentListItem[]>([]);
+const scoreBrief = ref<ScoreBrief | null>(null);
 const loading = ref(false);
 
 /** 关注等级标签文字 */
@@ -34,11 +35,6 @@ function focusLevelType(level: number): 'info' | 'warning' | 'danger' {
 /** 跳转学生详情 */
 function goStudent(id: number): void {
   router.push(`/students/${id}`);
-}
-
-/** 打开速记窗 */
-function handleOpenQuickNote(): void {
-  openQuickNote?.();
 }
 
 /** 待办标题展示 */
@@ -67,6 +63,7 @@ async function loadDashboard(): Promise<void> {
     draftCount.value = home.draftCount;
     dueFollowUps.value = home.dueFollowUps;
     recentDrafts.value = home.recentDrafts;
+    scoreBrief.value = home.scoreBrief;
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '加载看板失败');
   } finally {
@@ -81,23 +78,7 @@ onMounted(() => {
 
 <template>
   <div class="dashboard" v-loading="loading">
-    <div class="cp-hero cp-animate-in">
-      <div>
-        <div class="cp-hero__kicker">ClassPilot</div>
-        <h1 class="cp-hero__title">首页看板</h1>
-        <p class="cp-hero__desc">今天上什么课、该找谁、哪些事还没收尾</p>
-      </div>
-      <el-button
-        type="primary"
-        class="dashboard__hero-cta"
-        :icon="EditPen"
-        @click="handleOpenQuickNote"
-      >
-        速记
-      </el-button>
-    </div>
-
-    <!-- 上区：左课表 + 右待办/关注 -->
+    <!-- 左课表 + 右待办/关注（去掉英雄横幅，优先首屏完整展示课表） -->
     <div class="dashboard__split">
       <WeeklyScheduleCard compact class="dashboard__schedule" />
 
@@ -201,25 +182,15 @@ onMounted(() => {
         </section>
       </div>
     </div>
+
+    <ScoreBriefSection v-if="scoreBrief" :brief="scoreBrief" />
   </div>
 </template>
 
 <style scoped>
-.dashboard__hero-cta {
-  --el-button-bg-color: #fff;
-  --el-button-border-color: #fff;
-  --el-button-text-color: var(--cp-primary-active);
-  --el-button-hover-bg-color: #f8fafc;
-  --el-button-hover-border-color: #f8fafc;
-  --el-button-hover-text-color: var(--cp-primary-active);
-  border-radius: 999px;
-  font-weight: 700;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-}
-
 .dashboard__split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: var(--cp-gap-5);
   align-items: stretch;
   margin-bottom: var(--cp-gap-6);

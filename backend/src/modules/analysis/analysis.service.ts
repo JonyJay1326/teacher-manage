@@ -100,10 +100,123 @@ export interface AnalysisOverviewView {
   };
 }
 
+/** 首页成绩简报 · 单科一行 */
+export interface ScoreBriefSubjectItem {
+  subjectId: number;
+  subjectName: string;
+  avgScore: number;
+  lowRate: number;
+  sampleCount: number;
+}
+
+/** 首页成绩简报（无已录成绩考试时返回 null） */
+export interface ScoreBriefView {
+  latestExamId: number;
+  latestExamName: string;
+  latestExamDate: string | null;
+  latestClassAvg: number | null;
+  /** 近场总分趋势（最多 8 场） */
+  totalTrend: TotalTrendPoint[];
+  /** 最近一场各科均分 + 低分率（按低分率降序） */
+  subjects: ScoreBriefSubjectItem[];
+}
+
 /** 分析业务服务 */
 @Injectable()
 export class AnalysisService {
   constructor(private readonly analysisRepository: AnalysisRepository) {}
+
+  /**
+   * 首页成绩简报：有已录成绩的考试才返回数据，否则 null。
+   * 仅组装趋势 + 最近一场各科均分/低分率，避免拖入全量分析图。
+   */
+  getScoreBrief(): ScoreBriefView | null {
+    const settings = this.analysisRepository.getSettings();
+    const lowScoreRatio = Number(settings.low_score_ratio ?? 0.4);
+    const exams = this.analysisRepository.listExamsWithScores();
+    if (exams.length === 0) return null;
+
+    const totalTrend: TotalTrendPoint[] = exams.map((exam) => {
+      const totals = this.analysisRepository.listStudentTotals(exam.id);
+      const classAvg =
+        totals.length > 0
+          ? Math.round(
+              (totals.reduce((s, t) => s + t.total_score, 0) / totals.length) *
+                10,
+            ) / 10
+          : null;
+      return {
+        examId: exam.id,
+        examName: exam.name,
+        examDate: exam.exam_date,
+        classAvg,
+        gradeAvg: this.parseGradeAvg(exam.grade_ref),
+        studentCount: totals.length,
+      };
+    });
+
+    const withScores = totalTrend.filter((p) => p.studentCount > 0);
+    if (withScores.length === 0) return null;
+
+    const latest = withScores[withScores.length - 1];
+    const subjects = this.buildBriefSubjects(latest.examId, lowScoreRatio);
+    if (subjects.length === 0) return null;
+
+    const trendWindow = totalTrend.slice(-8);
+    return {
+      latestExamId: latest.examId,
+      latestExamName: latest.examName,
+      latestExamDate: latest.examDate,
+      latestClassAvg: latest.classAvg,
+      totalTrend: trendWindow,
+      subjects,
+    };
+  }
+
+  /** 简报用：各科班均 + 低分率 */
+  private buildBriefSubjects(
+    examId: number,
+    lowScoreRatio: number,
+  ): ScoreBriefSubjectItem[] {
+    const rows = this.analysisRepository.listSubjectScores(examId);
+    const bySubject = new Map<
+      number,
+      { name: string; full: number; scores: number[] }
+    >();
+
+    for (const row of rows) {
+      if (row.status !== '正常' || row.score === null) continue;
+      let bucket = bySubject.get(row.subject_id);
+      if (!bucket) {
+        bucket = {
+          name: row.subject_name,
+          full: row.full_score,
+          scores: [],
+        };
+        bySubject.set(row.subject_id, bucket);
+      }
+      bucket.scores.push(row.score);
+    }
+
+    const items: ScoreBriefSubjectItem[] = [];
+    for (const [subjectId, bucket] of bySubject) {
+      const n = bucket.scores.length;
+      if (n === 0) continue;
+      const sum = bucket.scores.reduce((a, b) => a + b, 0);
+      const lowLine = bucket.full * lowScoreRatio;
+      const lowCount = bucket.scores.filter((s) => s < lowLine).length;
+      items.push({
+        subjectId,
+        subjectName: bucket.name,
+        avgScore: Math.round((sum / n) * 10) / 10,
+        lowRate: Math.round((lowCount / n) * 1000) / 10,
+        sampleCount: n,
+      });
+    }
+
+    items.sort((a, b) => b.lowRate - a.lowRate);
+    return items;
+  }
 
   /** 分析中心聚合（成绩三图 + 关注频率 + 沟通热力） */
   getOverview(examId?: number, subjectId?: number): AnalysisOverviewView {

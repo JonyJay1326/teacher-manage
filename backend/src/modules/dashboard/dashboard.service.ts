@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  AnalysisService,
+  type ScoreBriefView,
+} from '../analysis/analysis.service';
 import { IncidentsService, type IncidentView } from '../incidents/incidents.service';
 import {
   DashboardRepository,
@@ -27,6 +31,8 @@ export interface DashboardHomeView {
   dueFollowUps: IncidentView[];
   draftCount: number;
   recentDrafts: IncidentView[];
+  /** 无最新已录成绩时为 null，前端整区隐藏 */
+  scoreBrief: ScoreBriefView | null;
 }
 
 /** 看板业务服务 */
@@ -35,9 +41,10 @@ export class DashboardService {
   constructor(
     private readonly dashboardRepository: DashboardRepository,
     private readonly incidentsService: IncidentsService,
+    private readonly analysisService: AnalysisService,
   ) {}
 
-  /** 首页看板聚合（关注墙 + 待办跟进 + 草稿入口） */
+  /** 首页看板聚合（关注墙 + 待办跟进 + 草稿入口 + 成绩简报） */
   getHome(): DashboardHomeView {
     const focusRows = this.dashboardRepository.findFocusStudents(2);
     const studentIds = focusRows.map((r) => r.id);
@@ -70,12 +77,14 @@ export class DashboardService {
     const dueFollowUps = this.incidentsService.listDueFollowUps(5);
     const draftCount = this.incidentsService.draftCount().count;
     const recentDrafts = this.incidentsService.listRecentDrafts(5);
+    const scoreBrief = this.analysisService.getScoreBrief();
 
     return {
       focusStudents,
       dueFollowUps,
       draftCount,
       recentDrafts,
+      scoreBrief,
     };
   }
 
