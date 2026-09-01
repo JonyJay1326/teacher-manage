@@ -578,7 +578,7 @@ onMounted(() => {
       <div>
         <h2 class="cp-page-header__title">分析中心</h2>
         <p class="cp-page-header__desc">
-          八张图：成绩三图 · 关注频率 · 沟通热力 · 类别分布 · 单科分布 · 月度趋势
+          九张图：成绩趋势/比率/进退步 · 关注频率 · 沟通热力 · 类别分布 · 单科直方图 · 月度趋势 · 各科气泡
         </p>
       </div>
       <el-button type="primary" @click="goDataAsk">用自然语言问</el-button>
