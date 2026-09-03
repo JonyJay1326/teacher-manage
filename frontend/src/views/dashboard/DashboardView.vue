@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { EditPen } from '@element-plus/icons-vue';
+import { EditPen, Hide } from '@element-plus/icons-vue';
 import { ApiError } from '@/api/http';
 import { dashboardHomeApi, type ScoreBrief } from '@/api/dashboard';
 import WeeklyScheduleCard from '@/components/WeeklyScheduleCard.vue';
@@ -171,9 +171,20 @@ onMounted(() => {
                   </el-tag>
                 </div>
               </div>
-              <p v-if="student.lastIncidentSummary" class="focus-card__summary">
-                {{ student.lastIncidentSummary }}
-              </p>
+              <el-tooltip
+                v-if="student.lastIncidentSummary"
+                :content="student.lastIncidentSummary"
+                placement="top"
+                effect="light"
+                :show-after="280"
+                :hide-after="0"
+                popper-class="focus-card__summary-popper"
+              >
+                <p class="focus-card__summary focus-card__summary--masked" @click.stop>
+                  <el-icon class="focus-card__summary-icon"><Hide /></el-icon>
+                  <span>悬停查看近况</span>
+                </p>
+              </el-tooltip>
               <div v-if="student.daysSinceLastContact !== undefined" class="focus-card__contact">
                 沟通 {{ student.daysSinceLastContact }} 天前
               </div>
@@ -252,7 +263,6 @@ onMounted(() => {
 }
 
 .focus-grid--side .focus-card__summary {
-  -webkit-line-clamp: 1;
   margin-bottom: var(--cp-gap-1);
 }
 
@@ -296,12 +306,28 @@ onMounted(() => {
 .focus-card__summary {
   margin: 0 0 var(--cp-gap-2);
   font-size: var(--cp-font-sm);
-  color: var(--cp-text-2);
+  color: var(--cp-text-3);
   line-height: 1.55;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+}
+
+/* 近况摘要默认脱敏：仅悬停 tooltip 展示全文，降低被旁人瞥见的风险 */
+.focus-card__summary--masked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: var(--cp-radius-ctl);
+  background: var(--cp-bg-page);
+  border: 1px dashed var(--cp-divider);
+  cursor: help;
+  user-select: none;
+}
+
+.focus-card__summary-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--cp-text-3);
 }
 
 .focus-card__contact {
@@ -373,5 +399,26 @@ onMounted(() => {
 
 .todo-item__draft-link:hover {
   text-decoration: underline;
+}
+</style>
+
+<style>
+/* tooltip 挂到 body，需非 scoped；白色气泡与设计令牌对齐 */
+.focus-card__summary-popper.el-popper {
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: var(--cp-radius-card);
+  border: 1px solid var(--cp-border);
+  background: var(--cp-bg-card);
+  color: var(--cp-text-1);
+  font-size: var(--cp-font-sm);
+  line-height: 1.6;
+  word-break: break-word;
+  box-shadow: var(--cp-shadow-2);
+}
+
+.focus-card__summary-popper .el-popper__arrow::before {
+  border: 1px solid var(--cp-border);
+  background: var(--cp-bg-card);
 }
 </style>

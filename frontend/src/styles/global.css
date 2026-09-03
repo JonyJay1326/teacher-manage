@@ -125,6 +125,10 @@ body {
 }
 
 .cp-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cp-gap-3);
   padding: var(--cp-gap-3) var(--cp-gap-4);
   margin-bottom: var(--cp-gap-4);
 }
@@ -198,32 +202,61 @@ body {
   gap: 6px;
 }
 
-/* 全局 Input：中文占位符/输入值不被行高裁切 */
+/*
+ * 表单控件统一高度：Input / Select / DatePicker 与按钮同档。
+ * 用固定 height（不只 min-height），避免中文行高/内边距导致同档控件高低不一。
+ */
 .el-input__wrapper {
+  height: var(--el-component-size);
+  min-height: var(--el-component-size);
+  padding-top: 0;
+  padding-bottom: 0;
   align-items: center;
+  box-sizing: border-box;
+}
+
+.el-input--large .el-input__wrapper {
+  height: var(--el-component-size-large);
+  min-height: var(--el-component-size-large);
+}
+
+.el-input--small .el-input__wrapper {
+  height: var(--el-component-size-small);
+  min-height: var(--el-component-size-small);
 }
 
 .el-input__inner {
+  height: 100%;
   line-height: 1.25;
 }
 
-/* 全局 Select：行高与按钮一致，避免占位符/选中项底部裁切 */
+.el-textarea__inner {
+  line-height: 1.5;
+}
+
 .el-select__wrapper {
+  height: var(--el-component-size);
   min-height: var(--el-component-size);
+  padding-top: 0;
+  padding-bottom: 0;
   line-height: 1.25;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .el-select__wrapper.is-large {
+  height: var(--el-component-size-large);
   min-height: var(--el-component-size-large);
 }
 
 .el-select__wrapper.is-small {
+  height: var(--el-component-size-small);
   min-height: var(--el-component-size-small);
 }
 
 .el-select__selection {
   align-items: center;
+  height: 100%;
 }
 
 .el-select__selected-item {
@@ -233,6 +266,8 @@ body {
 }
 
 .el-select__placeholder {
+  display: inline-flex;
+  align-items: center;
   line-height: 1.25;
 }
 
@@ -240,6 +275,29 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* DatePicker 基于 Input，强制同高 */
+.el-date-editor.el-input,
+.el-date-editor.el-input__wrapper {
+  height: var(--el-component-size);
+}
+
+.el-date-editor.el-input--large,
+.el-date-editor.el-input--large .el-input__wrapper {
+  height: var(--el-component-size-large);
+}
+
+.el-date-editor.el-input--small,
+.el-date-editor.el-input--small .el-input__wrapper {
+  height: var(--el-component-size-small);
+}
+
+/* 筛选条内控件默认对齐（避免某页单独 size=small 导致高低不一） */
+.cp-filter-bar .el-select,
+.cp-filter-bar .el-input,
+.cp-filter-bar .el-button:not(.is-text):not(.is-link) {
+  vertical-align: middle;
 }
 
 .el-dialog__footer {

@@ -99,8 +99,8 @@
   --el-font-size-base: var(--cp-font-base);
   --el-font-size-small: var(--cp-font-sm);
 
-  /* 与 16px 按钮字号匹配的控件高度，避免按钮内文字视觉偏上 */
+  /* 与 16px 按钮字号匹配的控件高度；small 略抬到 32，避免中文在 28 里显得挤/不齐 */
   --el-component-size: 36px;
   --el-component-size-large: 40px;
-  --el-component-size-small: 28px;
+  --el-component-size-small: 32px;
 }

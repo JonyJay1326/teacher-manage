@@ -285,10 +285,10 @@ onMounted(() => {
         <el-tab-pane label="已确认" name="confirmed" />
       </el-tabs>
       <div class="incident-list__filters">
-        <el-select v-model="filterCategory" placeholder="类别" clearable size="small" style="width: 120px">
+        <el-select v-model="filterCategory" placeholder="类别" clearable style="width: 120px">
           <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
         </el-select>
-        <el-select v-model="filterSeverity" placeholder="严重度" clearable size="small" style="width: 100px">
+        <el-select v-model="filterSeverity" placeholder="严重度" clearable style="width: 110px">
           <el-option label="轻" :value="1" />
           <el-option label="中" :value="2" />
           <el-option label="重" :value="3" />
@@ -451,7 +451,8 @@ onMounted(() => {
 
 .incident-list__filters {
   display: flex;
-  gap: var(--cp-gap-2);
+  align-items: center;
+  gap: var(--cp-gap-3);
   flex-wrap: wrap;
 }
 
