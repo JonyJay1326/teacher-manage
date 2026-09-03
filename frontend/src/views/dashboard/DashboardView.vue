@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { EditPen, Hide } from '@element-plus/icons-vue';
@@ -36,6 +36,19 @@ function focusLevelType(level: number): 'info' | 'warning' | 'danger' {
 function goStudent(id: number): void {
   router.push(`/students/${id}`);
 }
+
+/** 跳转事件详情（待办跟进） */
+function goIncident(id: number): void {
+  router.push(`/incidents/${id}`);
+}
+
+/** 待办区是否为空（空态不限制高度，避免多余滚动条） */
+const isTodoEmpty = computed(
+  () =>
+    dueFollowUps.value.length === 0 &&
+    recentDrafts.value.length === 0 &&
+    draftCount.value === 0,
+);
 
 /** 待办标题展示 */
 function todoTitle(item: IncidentListItem): string {
@@ -93,17 +106,23 @@ onMounted(() => {
               <el-button text type="primary">全部</el-button>
             </router-link>
           </div>
-          <el-card shadow="never" class="dashboard__todo-card dashboard__todo-card--side">
-            <div
-              v-if="dueFollowUps.length === 0 && recentDrafts.length === 0 && draftCount === 0"
-            >
+          <el-card
+            shadow="never"
+            class="dashboard__todo-card dashboard__todo-card--side"
+            :class="{ 'dashboard__todo-card--empty': isTodoEmpty }"
+          >
+            <div v-if="isTodoEmpty">
               <el-empty description="暂无待办事项" :image-size="56" />
             </div>
             <div v-else class="todo-list">
               <div
                 v-for="item in dueFollowUps"
                 :key="`follow-${item.id}`"
-                class="todo-item"
+                class="todo-item todo-item--clickable"
+                role="button"
+                tabindex="0"
+                @click="goIncident(item.id)"
+                @keydown.enter="goIncident(item.id)"
               >
                 <span class="todo-item__dot cp-pulse-dot" />
                 <div class="todo-item__content">
@@ -243,9 +262,18 @@ onMounted(() => {
   flex: 1;
 }
 
-.dashboard__todo-card--side :deep(.el-card__body) {
+/* 有待办时才限高滚动；空态去掉 overflow，避免空白滚动条 */
+.dashboard__todo-card--side:not(.dashboard__todo-card--empty) :deep(.el-card__body) {
   max-height: 220px;
   overflow-y: auto;
+}
+
+.dashboard__todo-card--empty :deep(.el-card__body) {
+  overflow: hidden;
+}
+
+.dashboard__todo-card--empty :deep(.el-empty) {
+  padding: var(--cp-gap-3) 0;
 }
 
 .dashboard__empty {
@@ -351,6 +379,23 @@ onMounted(() => {
   align-items: flex-start;
   gap: var(--cp-gap-3);
   padding: var(--cp-gap-2) 0;
+}
+
+.todo-item--clickable {
+  cursor: pointer;
+  border-radius: var(--cp-radius-ctl);
+  margin: 0 calc(var(--cp-gap-2) * -1);
+  padding-left: var(--cp-gap-2);
+  padding-right: var(--cp-gap-2);
+  transition: background-color 0.15s ease;
+}
+
+.todo-item--clickable:hover {
+  background: var(--cp-primary-bg);
+}
+
+.todo-item--clickable:hover .todo-item__title {
+  color: var(--cp-primary);
 }
 
 .todo-item__dot {

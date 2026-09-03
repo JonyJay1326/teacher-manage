@@ -162,4 +162,49 @@ export class UpdateIncidentDto {
   @IsOptional()
   @IsBoolean()
   followUpDone?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  followUpResult?: string | null;
+}
+
+/** 直接新建正式事件 */
+export class CreateIncidentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  content!: string;
+
+  @IsIn(INCIDENT_CATEGORIES)
+  category!: IncidentCategory;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  severity!: number;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  studentIds!: number[];
+
+  @IsOptional()
+  @IsString()
+  occurredAt?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  followUpNeeded?: boolean;
+
+  @IsOptional()
+  @IsString()
+  followUpDeadline?: string | null;
 }

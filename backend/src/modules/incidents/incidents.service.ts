@@ -3,6 +3,7 @@ import { AppException, ErrorCodes, nowIso } from '../../common/api';
 import {
   ConfirmIncidentDto,
   CreateDraftDto,
+  CreateIncidentDto,
   ListIncidentsQueryDto,
   UpdateIncidentDto,
 } from './incidents.dto';
@@ -26,6 +27,7 @@ export interface IncidentView {
   followUpDeadline: string | null;
   followUpDone: boolean;
   followUpDoneAt: string | null;
+  followUpResult: string | null;
   studentIds: number[];
   studentNames: string[];
   createdAt: string;
@@ -99,6 +101,32 @@ export class IncidentsService {
     return this.getById(id);
   }
 
+  /** 直接新建已确认事件 */
+  create(dto: CreateIncidentDto): IncidentView {
+    this.assertStudentsExist(dto.studentIds);
+    const title = dto.title.trim();
+    const content = dto.content.trim();
+    if (!title || !content) {
+      throw new AppException(ErrorCodes.VALIDATION, '标题与内容不能为空');
+    }
+    const followUpNeeded = dto.followUpNeeded ?? false;
+    const id = this.incidentsRepository.createConfirmed({
+      occurredAt: dto.occurredAt?.trim() || nowIso(),
+      category: dto.category,
+      severity: dto.severity,
+      title,
+      content,
+      followUpNeeded,
+      followUpDeadline: followUpNeeded
+        ? dto.followUpDeadline === undefined
+          ? null
+          : dto.followUpDeadline
+        : null,
+      studentIds: dto.studentIds,
+    });
+    return this.getById(id);
+  }
+
   /** 人工确认：status 设为 confirmed，保留 draft_content */
   confirm(id: number, dto: ConfirmIncidentDto): IncidentView {
     const row = this.requireIncident(id);
@@ -133,6 +161,15 @@ export class IncidentsService {
       followUpDoneAt = null;
     }
 
+    let followUpResult: string | null | undefined;
+    if (dto.followUpResult !== undefined) {
+      const trimmed = dto.followUpResult?.trim() || null;
+      followUpResult = trimmed;
+    }
+    if (dto.followUpDone === false) {
+      followUpResult = null;
+    }
+
     this.incidentsRepository.update(id, {
       title: dto.title?.trim(),
       content: dto.content?.trim(),
@@ -143,6 +180,7 @@ export class IncidentsService {
       followUpDeadline:
         dto.followUpDeadline === undefined ? undefined : dto.followUpDeadline,
       followUpDoneAt,
+      followUpResult,
     });
     return this.getById(id);
   }
@@ -232,6 +270,7 @@ export class IncidentsService {
       followUpDeadline: row.follow_up_deadline,
       followUpDone: row.follow_up_done_at != null,
       followUpDoneAt: row.follow_up_done_at,
+      followUpResult: row.follow_up_result,
       studentIds,
       studentNames,
       createdAt: row.created_at,

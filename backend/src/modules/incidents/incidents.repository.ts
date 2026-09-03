@@ -16,6 +16,7 @@ export interface IncidentRow {
   follow_up_needed: number;
   follow_up_deadline: string | null;
   follow_up_done_at: string | null;
+  follow_up_result: string | null;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
@@ -38,6 +39,18 @@ export interface CreateDraftInput {
   studentIds: number[];
 }
 
+/** 直接新建正式事件入参 */
+export interface CreateConfirmedInput {
+  occurredAt: string;
+  category: string;
+  severity: number;
+  title: string;
+  content: string;
+  followUpNeeded: boolean;
+  followUpDeadline: string | null;
+  studentIds: number[];
+}
+
 /** 更新事件字段入参 */
 export interface UpdateIncidentInput {
   occurredAt?: string;
@@ -50,6 +63,7 @@ export interface UpdateIncidentInput {
   followUpNeeded?: boolean;
   followUpDeadline?: string | null;
   followUpDoneAt?: string | null;
+  followUpResult?: string | null;
 }
 
 /** 列表筛选条件 */
@@ -195,6 +209,36 @@ export class IncidentsRepository {
     return run();
   }
 
+  /** 直接创建已确认事件并关联学生 */
+  createConfirmed(input: CreateConfirmedInput): number {
+    const now = nowIso();
+    const db = this.databaseService.getDb();
+    const run = db.transaction(() => {
+      const result = db
+        .prepare(
+          `INSERT INTO incidents (
+             occurred_at, category, severity, title, content, draft_content,
+             status, follow_up_needed, follow_up_deadline, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, NULL, 'confirmed', ?, ?, ?, ?)`,
+        )
+        .run(
+          input.occurredAt,
+          input.category,
+          input.severity,
+          input.title,
+          input.content,
+          input.followUpNeeded ? 1 : 0,
+          input.followUpDeadline,
+          now,
+          now,
+        );
+      const incidentId = Number(result.lastInsertRowid);
+      this.replaceStudentsTx(incidentId, input.studentIds);
+      return incidentId;
+    });
+    return run();
+  }
+
   /** 更新事件字段 */
   update(id: number, input: UpdateIncidentInput): void {
     const sets: string[] = [];
@@ -239,6 +283,10 @@ export class IncidentsRepository {
     if (input.followUpDoneAt !== undefined) {
       sets.push('follow_up_done_at = ?');
       params.push(input.followUpDoneAt);
+    }
+    if (input.followUpResult !== undefined) {
+      sets.push('follow_up_result = ?');
+      params.push(input.followUpResult);
     }
 
     if (sets.length === 0) return;

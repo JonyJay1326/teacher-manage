@@ -49,6 +49,20 @@ export function createDraftApi(body: {
   return httpPost('/v1/incidents/draft', body);
 }
 
+/** 直接新建正式事件 */
+export function createIncidentApi(body: {
+  title: string;
+  content: string;
+  category: IncidentCategory | string;
+  severity: number;
+  studentIds: number[];
+  occurredAt?: string;
+  followUpNeeded?: boolean;
+  followUpDeadline?: string | null;
+}): Promise<IncidentListItem> {
+  return httpPost('/v1/incidents', body);
+}
+
 /** 确认结构化 */
 export function confirmIncidentApi(
   id: number,

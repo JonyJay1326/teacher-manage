@@ -6,6 +6,7 @@ import { ApiError } from '@/api/http';
 import {
   listIncidentsApi,
   confirmIncidentApi,
+  createIncidentApi,
   deleteIncidentApi,
   draftCountApi,
   type IncidentListItem,
@@ -46,6 +47,18 @@ const confirmSeverity = ref<1 | 2 | 3>(1);
 const confirmStudentIds = ref<number[]>([]);
 const confirmFollowUpNeeded = ref(false);
 const confirmFollowUpDeadline = ref('');
+
+/** 新建正式事件对话框 */
+const createVisible = ref(false);
+const createLoading = ref(false);
+const createTitle = ref('');
+const createContent = ref('');
+const createCategory = ref<IncidentCategory>('其他');
+const createSeverity = ref<1 | 2 | 3>(1);
+const createStudentIds = ref<number[]>([]);
+const createOccurredAt = ref('');
+const createFollowUpNeeded = ref(false);
+const createFollowUpDeadline = ref('');
 
 /** 类别选项 */
 const categoryOptions: IncidentCategory[] = [
@@ -155,6 +168,62 @@ async function loadStudents(): Promise<void> {
     studentOptions.value = res.items;
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '加载学生失败');
+  }
+}
+
+/** 打开新建事件对话框 */
+function openCreateDialog(): void {
+  createTitle.value = '';
+  createContent.value = '';
+  createCategory.value = '其他';
+  createSeverity.value = 1;
+  createStudentIds.value = [];
+  createOccurredAt.value = new Date().toISOString().slice(0, 16);
+  createFollowUpNeeded.value = false;
+  createFollowUpDeadline.value = '';
+  createVisible.value = true;
+}
+
+/** 提交新建正式事件 */
+async function submitCreate(): Promise<void> {
+  if (!createTitle.value.trim()) {
+    ElMessage.warning('请填写标题');
+    return;
+  }
+  if (!createContent.value.trim()) {
+    ElMessage.warning('请填写内容');
+    return;
+  }
+  if (createStudentIds.value.length === 0) {
+    ElMessage.warning('请至少选择一名学生');
+    return;
+  }
+  createLoading.value = true;
+  try {
+    const occurredIso = createOccurredAt.value
+      ? new Date(createOccurredAt.value).toISOString()
+      : undefined;
+    await createIncidentApi({
+      title: createTitle.value.trim(),
+      content: createContent.value.trim(),
+      category: createCategory.value,
+      severity: createSeverity.value,
+      studentIds: [...createStudentIds.value],
+      occurredAt: occurredIso,
+      followUpNeeded: createFollowUpNeeded.value,
+      followUpDeadline: createFollowUpNeeded.value
+        ? createFollowUpDeadline.value
+          ? new Date(`${createFollowUpDeadline.value}T23:59:59`).toISOString()
+          : null
+        : null,
+    });
+    ElMessage.success('事件已创建');
+    createVisible.value = false;
+    incidentsStore.bumpDataVersion();
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof ApiError ? err.message : '创建失败');
+  } finally {
+    createLoading.value = false;
   }
 }
 
@@ -270,6 +339,7 @@ onMounted(() => {
         <h2 class="cp-page-header__title">事件记录</h2>
         <p class="cp-page-header__desc">班级事件、家校沟通与速记草稿</p>
       </div>
+      <el-button type="primary" @click="openCreateDialog">新建事件</el-button>
     </div>
 
     <!-- 筛选条 -->
@@ -422,6 +492,80 @@ onMounted(() => {
         <el-button @click="confirmVisible = false">取消</el-button>
         <el-button type="primary" :loading="confirmLoading" @click="submitConfirm">
           确认入库
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新建正式事件对话框 -->
+    <el-dialog
+      v-model="createVisible"
+      title="新建事件"
+      width="560px"
+      append-to-body
+      align-center
+      destroy-on-close
+    >
+      <el-form label-width="80px">
+        <el-form-item label="标题" required>
+          <el-input v-model="createTitle" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-form-item label="内容" required>
+          <el-input v-model="createContent" type="textarea" :rows="5" />
+        </el-form-item>
+        <el-form-item label="发生时间">
+          <el-date-picker
+            v-model="createOccurredAt"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm"
+            placeholder="选择发生时间"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="类别" required>
+          <el-select v-model="createCategory" style="width: 100%">
+            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="严重度" required>
+          <el-radio-group v-model="createSeverity">
+            <el-radio :value="1">轻</el-radio>
+            <el-radio :value="2">中</el-radio>
+            <el-radio :value="3">重</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="学生" required>
+          <el-select
+            v-model="createStudentIds"
+            multiple
+            filterable
+            placeholder="选择涉事学生"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="s in studentOptions"
+              :key="s.id"
+              :label="`${s.studentNo} ${s.name}`"
+              :value="s.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="需要跟进">
+          <el-switch v-model="createFollowUpNeeded" />
+        </el-form-item>
+        <el-form-item v-if="createFollowUpNeeded" label="截止日期">
+          <el-date-picker
+            v-model="createFollowUpDeadline"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择跟进截止日期"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createVisible = false">取消</el-button>
+        <el-button type="primary" :loading="createLoading" @click="submitCreate">
+          创建
         </el-button>
       </template>
     </el-dialog>

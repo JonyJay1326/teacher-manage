@@ -106,6 +106,8 @@ export interface Incident {
   followUpNeeded: boolean;
   followUpDone: boolean;
   followUpDeadline?: string;
+  followUpDoneAt?: string | null;
+  followUpResult?: string | null;
   status: 'draft' | 'confirmed';
 }
 

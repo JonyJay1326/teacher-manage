@@ -25,6 +25,7 @@ import {
 import {
   ConfirmIncidentDto,
   CreateDraftDto,
+  CreateIncidentDto,
   ListIncidentsQueryDto,
   UpdateIncidentDto,
 } from './incidents.dto';
@@ -64,6 +65,12 @@ export class IncidentsController {
   @Post('draft')
   createDraft(@Body() dto: CreateDraftDto): IncidentView {
     return this.incidentsService.createDraft(dto);
+  }
+
+  /** 直接新建正式事件 */
+  @Post()
+  create(@Body() dto: CreateIncidentDto): IncidentView {
+    return this.incidentsService.create(dto);
   }
 
   /** 事件附件列表 */

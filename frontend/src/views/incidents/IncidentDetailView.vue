@@ -37,6 +37,7 @@ const formStudentIds = ref<number[]>([]);
 const formFollowUpNeeded = ref(false);
 const formFollowUpDeadline = ref('');
 const formFollowUpDone = ref(false);
+const formFollowUpResult = ref('');
 
 const categoryOptions: IncidentCategory[] = [
   '纪律违纪',
@@ -64,6 +65,7 @@ async function loadDetail(): Promise<void> {
       ? data.followUpDeadline.slice(0, 10)
       : '';
     formFollowUpDone.value = data.followUpDone;
+    formFollowUpResult.value = data.followUpResult ?? '';
     await loadAttachments();
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '加载失败');
@@ -158,6 +160,10 @@ async function handleSave(): Promise<void> {
           ? formFollowUpDeadline.value || null
           : null,
         followUpDone: formFollowUpDone.value,
+        followUpResult:
+          formFollowUpNeeded.value && formFollowUpDone.value
+            ? formFollowUpResult.value.trim() || null
+            : null,
       });
       ElMessage.success('已保存');
     }
@@ -198,7 +204,7 @@ onMounted(() => {
 
 <template>
   <div class="incident-detail cp-animate-in" v-loading="loading">
-    <div class="cp-page-header">
+    <div class="cp-page-header incident-detail__header">
       <div>
         <h2 class="cp-page-header__title">
           事件详情
@@ -277,6 +283,19 @@ onMounted(() => {
         >
           <el-switch v-model="formFollowUpDone" />
         </el-form-item>
+        <el-form-item
+          v-if="formFollowUpNeeded && formFollowUpDone && incident.status === 'confirmed'"
+          label="跟进结果"
+        >
+          <el-input
+            v-model="formFollowUpResult"
+            type="textarea"
+            :rows="4"
+            maxlength="5000"
+            show-word-limit
+            placeholder="选填：记录跟进结果或处理说明"
+          />
+        </el-form-item>
         <el-form-item v-if="incident.draftContent" label="原始速记">
           <pre class="incident-detail__draft">{{ incident.draftContent }}</pre>
         </el-form-item>
@@ -329,9 +348,25 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 滚动时页头吸顶，右上角操作始终可点 */
+.incident-detail__header {
+  position: sticky;
+  top: calc(var(--cp-gap-5) * -1);
+  z-index: 10;
+  margin-top: calc(var(--cp-gap-5) * -1);
+  margin-left: calc(var(--cp-gap-5) * -1);
+  margin-right: calc(var(--cp-gap-5) * -1);
+  padding: var(--cp-gap-5);
+  padding-bottom: var(--cp-gap-3);
+  background: var(--cp-bg-page);
+  border-bottom: 1px solid var(--cp-divider);
+  box-shadow: var(--cp-shadow-1);
+}
+
 .incident-detail__actions {
   display: flex;
   gap: var(--cp-gap-2);
+  flex-shrink: 0;
 }
 
 .incident-detail__form {
