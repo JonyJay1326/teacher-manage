@@ -78,11 +78,23 @@ export interface GuardianDto {
   remark: string | null;
 }
 
+/** 解析后的导入行（含可选性别与联系方式） */
+interface ParsedImportRow {
+  studentNo?: string;
+  name: string;
+  gender: number | null;
+  contact1?: string;
+  contact2?: string;
+}
+
 /** 导入预览行 */
 export interface ImportPreviewRowDto {
   studentNo?: string;
   name: string;
-  action: 'create' | 'skip' | 'match';
+  gender: number | null;
+  contact1?: string;
+  contact2?: string;
+  action: 'create' | 'skip' | 'update';
   matchedId?: number;
   message?: string;
 }
@@ -91,7 +103,7 @@ export interface ImportPreviewRowDto {
 export interface ImportConfirmResultDto {
   created: number;
   skipped: number;
-  matched: number;
+  updated: number;
   createdIds: number[];
 }
 
@@ -113,6 +125,8 @@ export class StudentsService {
       focusLevel: query.focusLevel,
       limit: pageSize,
       offset: (page - 1) * pageSize,
+      sortBy: query.sortBy ?? 'studentNo',
+      sortOrder: query.sortOrder ?? 'asc',
     });
     const ids = rows.map((r) => r.id);
     const tagMap = this.studentsRepository.listTagIdsByStudentIds(ids);
@@ -226,6 +240,60 @@ export class StudentsService {
     return this.studentsRepository.listAllTags().map((row) => this.mapTag(row));
   }
 
+  /**
+   * 新建普通标签（默认域「其他」、L0）。
+   * 同名未删标签直接返回；同域软删则恢复。
+   */
+  createTag(input: {
+    name: string;
+    domain?: string;
+    color?: string;
+  }): TagDto {
+    const name = input.name.trim();
+    if (!name) {
+      throw new AppException(ErrorCodes.VALIDATION, '标签名不能为空', 400);
+    }
+    const domain = input.domain?.trim() || '其他';
+    const allowedDomains = ['学业', '行为情绪', '健康', '家庭', '特长', '其他'];
+    if (!allowedDomains.includes(domain)) {
+      throw new AppException(ErrorCodes.VALIDATION, '标签域不合法', 400);
+    }
+
+    const activeSameName = this.studentsRepository.findActiveTagByName(name);
+    if (activeSameName) {
+      return this.mapTag(activeSameName);
+    }
+
+    const existing = this.studentsRepository.findTagByDomainAndName(
+      domain,
+      name,
+    );
+    if (existing) {
+      if (existing.deleted_at) {
+        this.studentsRepository.restoreTag(existing.id);
+        const restored = this.studentsRepository.findTagById(existing.id);
+        if (!restored) {
+          throw new AppException(ErrorCodes.SYSTEM, '标签恢复失败', 500);
+        }
+        return this.mapTag(restored);
+      }
+      return this.mapTag(existing);
+    }
+
+    const id = this.studentsRepository.insertTag({
+      domain,
+      name,
+      color: input.color?.trim() || null,
+      sensitiveLevel: 0,
+      isBuiltin: 0,
+    });
+    const row = this.studentsRepository.findTagById(id);
+    if (!row) {
+      throw new AppException(ErrorCodes.SYSTEM, '标签创建失败', 500);
+    }
+    return this.mapTag(row);
+  }
+
   /** 列出学生监护人 */
   listGuardians(studentId: number): GuardianDto[] {
     this.requireStudent(studentId);
@@ -297,12 +365,15 @@ export class StudentsService {
     return { rows };
   }
 
-  /** 确认执行导入 */
+  /** 确认执行导入（新建或更新已存在学生） */
   importConfirm(dto: ImportConfirmDto): ImportConfirmResultDto {
     let created = 0;
     let skipped = 0;
-    let matched = 0;
-    const toCreate: StudentInsertInput[] = [];
+    let updated = 0;
+    const toCreate: Array<{
+      student: StudentInsertInput;
+      guardians: Array<{ name: string; phone: string; isPrimary: number }>;
+    }> = [];
     const usedNos = new Set<string>();
 
     for (const row of dto.rows) {
@@ -310,14 +381,45 @@ export class StudentsService {
         skipped += 1;
         continue;
       }
-      if (row.action === 'match') {
-        matched += 1;
-        continue;
-      }
+
       const name = row.name.trim();
       if (!name) {
         throw new AppException(ErrorCodes.VALIDATION, '导入行姓名不能为空', 400);
       }
+
+      const gender =
+        row.gender === 0 || row.gender === 1 ? row.gender : null;
+      const contact1 = row.contact1?.trim() || '';
+      const contact2 = row.contact2?.trim() || '';
+
+      if (row.action === 'update') {
+        const target = this.resolveImportUpdateTarget(row);
+        const patch: {
+          name: string;
+          gender?: number;
+          studentNo?: string;
+        } = { name };
+        if (gender !== null) {
+          patch.gender = gender;
+        }
+        const nextNo = row.studentNo?.trim() || '';
+        if (
+          nextNo &&
+          nextNo !== target.student_no &&
+          this.canReassignStudentNo(nextNo, target.id, usedNos)
+        ) {
+          patch.studentNo = nextNo;
+          usedNos.add(nextNo);
+        } else if (nextNo) {
+          usedNos.add(nextNo);
+        }
+        this.studentsRepository.updateStudent(target.id, patch);
+        this.upsertImportGuardians(target.id, contact1, contact2);
+        updated += 1;
+        continue;
+      }
+
+      // create
       let studentNo = row.studentNo?.trim() || '';
       if (studentNo) {
         if (this.studentsRepository.findByStudentNo(studentNo) || usedNos.has(studentNo)) {
@@ -331,29 +433,132 @@ export class StudentsService {
         studentNo = this.generateStudentNo(usedNos);
       }
       usedNos.add(studentNo);
+
       toCreate.push({
-        studentNo,
-        name,
-        gender: null,
-        birthDate: null,
-        photoPath: null,
-        ethnicity: null,
-        address: null,
-        residence: null,
-        enrolledAt: null,
-        status: '在读',
-        boardType: '走读',
-        cadreRole: null,
-        focusLevel: 0,
-        remark: null,
+        student: {
+          studentNo,
+          name,
+          gender,
+          birthDate: null,
+          photoPath: null,
+          ethnicity: null,
+          address: null,
+          residence: null,
+          enrolledAt: null,
+          status: '在读',
+          boardType: '走读',
+          cadreRole: null,
+          focusLevel: 0,
+          remark: null,
+        },
+        guardians: this.buildImportGuardians(contact1, contact2),
       });
       created += 1;
     }
 
     const createdIds =
-      toCreate.length > 0 ? this.studentsRepository.insertStudentsBatch(toCreate) : [];
+      toCreate.length > 0
+        ? this.studentsRepository.insertStudentsWithGuardiansBatch(toCreate)
+        : [];
 
-    return { created, skipped, matched, createdIds };
+    return { created, skipped, updated, createdIds };
+  }
+
+  /** 解析更新目标学生 */
+  private resolveImportUpdateTarget(row: {
+    matchedId?: number;
+    studentNo?: string;
+    name: string;
+  }): StudentRow {
+    if (row.matchedId) {
+      const byId = this.studentsRepository.findById(row.matchedId);
+      if (byId) return byId;
+    }
+    const studentNo = row.studentNo?.trim();
+    if (studentNo) {
+      const byNo = this.studentsRepository.findByStudentNo(studentNo);
+      if (byNo) return byNo;
+    }
+    const byName = this.studentsRepository.findByName(row.name.trim());
+    if (byName.length === 1) return byName[0];
+    throw new AppException(
+      ErrorCodes.VALIDATION,
+      `无法定位待更新学生：${row.name}`,
+      400,
+    );
+  }
+
+  /** 导入时是否允许改写学号（不与他人冲突） */
+  private canReassignStudentNo(
+    studentNo: string,
+    currentId: number,
+    usedNos: Set<string>,
+  ): boolean {
+    if (usedNos.has(studentNo)) return false;
+    const existing = this.studentsRepository.findByStudentNo(studentNo);
+    return !existing || existing.id === currentId;
+  }
+
+  /** 由联系方式生成监护人写入列表 */
+  private buildImportGuardians(
+    contact1: string,
+    contact2: string,
+  ): Array<{ name: string; phone: string; isPrimary: number }> {
+    const guardians: Array<{ name: string; phone: string; isPrimary: number }> =
+      [];
+    if (contact1) {
+      guardians.push({ name: '监护人1', phone: contact1, isPrimary: 1 });
+    }
+    if (contact2) {
+      guardians.push({
+        name: '监护人2',
+        phone: contact2,
+        isPrimary: contact1 ? 0 : 1,
+      });
+    }
+    return guardians;
+  }
+
+  /** 按名称 upsert 导入监护人（有联系方式才写） */
+  private upsertImportGuardians(
+    studentId: number,
+    contact1: string,
+    contact2: string,
+  ): void {
+    if (!contact1 && !contact2) return;
+    const existing = this.studentsRepository.listGuardiansByStudentId(studentId);
+    const upsertOne = (
+      label: string,
+      phone: string,
+      isPrimary: number,
+    ): void => {
+      const found = existing.find((g) => g.name === label);
+      if (found) {
+        this.studentsRepository.updateGuardian(found.id, {
+          phone,
+          isPrimary,
+        });
+      } else {
+        this.studentsRepository.insertGuardian({
+          studentId,
+          relation: null,
+          name: label,
+          phone,
+          wechat: null,
+          job: null,
+          contactPref: null,
+          bestTime: null,
+          isPrimary,
+          remark: null,
+        });
+      }
+    };
+    if (contact1) {
+      upsertOne('监护人1', contact1, 1);
+    }
+    if (contact2) {
+      upsertOne('监护人2', contact2, contact1 ? 0 : 1);
+    }
   }
 
   /** 确保学生存在并返回行 */
@@ -385,62 +590,145 @@ export class StudentsService {
     };
   }
 
-  /** 解析粘贴文本为姓名/学号行 */
-  private parseImportText(text: string): Array<{ studentNo?: string; name: string }> {
+  /** 拆分一行粘贴文本为单元格 */
+  private splitImportCells(line: string): string[] {
+    const normalized = line.replace(/^\uFEFF/, '').trim();
+    if (normalized.includes('\t')) {
+      return normalized.split('\t').map((p) => p.replace(/\uFEFF/g, '').trim());
+    }
+    if (normalized.includes(',') || normalized.includes('，')) {
+      return normalized.split(/[,，]/).map((p) => p.trim());
+    }
+    // Excel 偶发用多空格对齐列
+    if (/\s{2,}/.test(normalized)) {
+      return normalized.split(/\s{2,}/).map((p) => p.trim());
+    }
+    return [normalized];
+  }
+
+  /** 判断是否像学号（含数字，或字母数字-_ 组合，且不是性别） */
+  private looksLikeStudentNo(value: string): boolean {
+    const v = value.trim();
+    if (!v) return false;
+    if (this.parseGenderCell(v) !== null) return false;
+    if (/\d/.test(v)) return true;
+    return /^[A-Za-z][A-Za-z0-9_-]*$/.test(v);
+  }
+
+  /** 解析性别文案为 1=男 / 0=女；无法识别则 null */
+  private parseGenderCell(raw: string | undefined): number | null {
+    if (!raw) return null;
+    const value = raw.trim();
+    if (!value) return null;
+    if (['男', '1', 'M', 'm', 'male', 'Male'].includes(value)) return 1;
+    if (['女', '0', 'F', 'f', 'female', 'Female'].includes(value)) return 0;
+    return null;
+  }
+
+  /** 是否为表头行（学号/姓名等） */
+  private isImportHeaderRow(parts: string[]): boolean {
+    const cells = parts.map((p) => p.trim());
+    return (
+      cells.includes('姓名') ||
+      cells.includes('学号') ||
+      cells.includes('性别') ||
+      cells.some((c) => c.startsWith('联系方式'))
+    );
+  }
+
+  /**
+   * 解析粘贴文本。
+   * 默认列序：学号 | 姓名 | 性别 | 联系方式1 | 联系方式2；
+   * 兼容仅姓名、学号+姓名；无学号时若第 2 列为性别则按姓名开头解析。
+   */
+  private parseImportText(text: string): ParsedImportRow[] {
     const lines = text
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    const result: Array<{ studentNo?: string; name: string }> = [];
+    const result: ParsedImportRow[] = [];
     for (const line of lines) {
+      const parts = this.splitImportCells(line);
+      if (parts.length === 0 || !parts.some((p) => p)) continue;
+      if (this.isImportHeaderRow(parts)) continue;
+
       let studentNo: string | undefined;
       let name: string;
+      let genderRaw: string | undefined;
+      let contact1: string | undefined;
+      let contact2: string | undefined;
 
-      if (line.includes('\t')) {
-        const parts = line.split('\t').map((p) => p.trim());
-        if (parts.length >= 2 && parts[0] && parts[1]) {
-          studentNo = parts[0];
-          name = parts[1];
-        } else if (parts[0]) {
+      if (parts.length === 1) {
+        name = parts[0];
+      } else if (parts.length === 2) {
+        // 姓名|性别 或 学号|姓名
+        if (
+          this.parseGenderCell(parts[1]) !== null &&
+          !this.looksLikeStudentNo(parts[0])
+        ) {
           name = parts[0];
+          genderRaw = parts[1];
         } else {
-          continue;
+          studentNo = parts[0] || undefined;
+          name = parts[1] || parts[0];
         }
-      } else if (line.includes(',')) {
-        const parts = line.split(',').map((p) => p.trim());
-        if (parts.length >= 2 && parts[0] && parts[1]) {
-          studentNo = parts[0];
-          name = parts[1];
-        } else if (parts[0]) {
-          name = parts[0];
-        } else {
-          continue;
-        }
+      } else if (
+        this.parseGenderCell(parts[1]) !== null &&
+        !this.looksLikeStudentNo(parts[0])
+      ) {
+        // 姓名 | 性别 | 联系1 | 联系2
+        name = parts[0] || '';
+        genderRaw = parts[1];
+        contact1 = parts[2] || undefined;
+        contact2 = parts[3] || undefined;
       } else {
-        name = line;
+        // 默认：学号 | 姓名 | 性别 | 联系1 | 联系2
+        studentNo = parts[0] || undefined;
+        name = parts[1] || '';
+        genderRaw = parts[2];
+        contact1 = parts[3] || undefined;
+        contact2 = parts[4] || undefined;
       }
 
       if (!name) continue;
-      result.push(studentNo ? { studentNo, name } : { name });
+      const contact1Trim = contact1?.trim() || undefined;
+      const contact2Trim = contact2?.trim() || undefined;
+      result.push({
+        studentNo: studentNo?.trim() || undefined,
+        name: name.trim(),
+        gender: this.parseGenderCell(genderRaw),
+        contact1: contact1Trim || undefined,
+        contact2: contact2Trim || undefined,
+      });
     }
     return result;
   }
 
-  /** 根据库内匹配情况建议导入动作 */
-  private suggestImportAction(item: {
-    studentNo?: string;
-    name: string;
-  }): ImportPreviewRowDto {
+  /** 根据库内匹配情况建议导入动作（已存在则编辑） */
+  private suggestImportAction(item: ParsedImportRow): ImportPreviewRowDto {
+    const base = {
+      studentNo: item.studentNo,
+      name: item.name,
+      gender: item.gender,
+      contact1: item.contact1,
+      contact2: item.contact2,
+    };
+
+    const guardianHint =
+      [item.contact1 ? '监护人1' : null, item.contact2 ? '监护人2' : null]
+        .filter(Boolean)
+        .join('、') || null;
+    const updateSuffix = guardianHint ? `，更新${guardianHint}` : '';
+
     if (item.studentNo) {
       const byNo = this.studentsRepository.findByStudentNo(item.studentNo);
       if (byNo) {
         return {
-          studentNo: item.studentNo,
-          name: item.name,
-          action: 'match',
+          ...base,
+          action: 'update',
           matchedId: byNo.id,
-          message: `学号匹配：${byNo.name}`,
+          message: `学号已存在，将更新「${byNo.name}」${updateSuffix}`,
         };
       }
     }
@@ -448,27 +736,24 @@ export class StudentsService {
     const byName = this.studentsRepository.findByName(item.name);
     if (byName.length === 1) {
       return {
-        studentNo: item.studentNo,
-        name: item.name,
-        action: 'match',
+        ...base,
+        action: 'update',
         matchedId: byName[0].id,
-        message: `姓名匹配学号 ${byName[0].student_no}`,
+        message: `姓名已存在（学号 ${byName[0].student_no}），将更新${updateSuffix}`,
       };
     }
     if (byName.length > 1) {
       return {
-        studentNo: item.studentNo,
-        name: item.name,
+        ...base,
         action: 'skip',
         message: `姓名存在 ${byName.length} 条同名记录，请手动处理`,
       };
     }
 
     return {
-      studentNo: item.studentNo,
-      name: item.name,
+      ...base,
       action: 'create',
-      message: '将新建',
+      message: guardianHint ? `将新建（含${guardianHint}）` : '将新建',
     };
   }
 

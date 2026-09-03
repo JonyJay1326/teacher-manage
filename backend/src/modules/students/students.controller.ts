@@ -14,6 +14,7 @@ import {
 import {
   CreateGuardianDto,
   CreateStudentDto,
+  CreateTagDto,
   ImportConfirmDto,
   ImportPreviewDto,
   ListStudentsQueryDto,
@@ -219,5 +220,15 @@ export class TagsController {
   @Get()
   listAll(): TagDto[] {
     return this.studentsService.listTags();
+  }
+
+  /** 新建普通标签（可从编辑标签弹窗里直接创建） */
+  @Post()
+  create(@Body() dto: CreateTagDto): TagDto {
+    return this.studentsService.createTag({
+      name: dto.name,
+      domain: dto.domain,
+      color: dto.color,
+    });
   }
 }

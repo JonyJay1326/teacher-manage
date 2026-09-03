@@ -58,6 +58,8 @@ export interface StudentListFilter {
   focusLevel?: number;
   limit: number;
   offset: number;
+  sortBy?: 'studentNo' | 'focusLevel';
+  sortOrder?: 'asc' | 'desc';
 }
 
 /** 新建学生写入字段 */
@@ -152,15 +154,33 @@ export class StudentsRepository {
     const totalRow = db
       .prepare(`SELECT COUNT(*) AS c FROM students WHERE ${whereSql}`)
       .get(...params) as { c: number };
+
+    const orderSql = this.buildListOrderBy(filter.sortBy, filter.sortOrder);
     const rows = db
       .prepare(
         `SELECT * FROM students WHERE ${whereSql}
-         ORDER BY student_no ASC
+         ${orderSql}
          LIMIT ? OFFSET ?`,
       )
       .all(...params, filter.limit, filter.offset) as StudentRow[];
 
     return { rows, total: totalRow.c };
+  }
+
+  /**
+   * 花名册排序：学号按数值自然序（1,2,10），避免字典序 10 排在 2 前。
+   */
+  private buildListOrderBy(
+    sortBy: StudentListFilter['sortBy'],
+    sortOrder: StudentListFilter['sortOrder'],
+  ): string {
+    const dir = sortOrder === 'desc' ? 'DESC' : 'ASC';
+    // 学号自然序：先纯数字优先，再按整数值，最后原文兜底
+    const studentNoOrder = `CASE WHEN student_no GLOB '[0-9]*' AND student_no NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, CAST(student_no AS INTEGER) ${dir}, student_no ${dir}`;
+    if (sortBy === 'focusLevel') {
+      return `ORDER BY focus_level ${dir}, ${studentNoOrder}`;
+    }
+    return `ORDER BY ${studentNoOrder}`;
   }
 
   /** 按 ID 查询未删除学生 */
@@ -396,6 +416,65 @@ export class StudentsRepository {
       .all() as TagRow[];
   }
 
+  /** 按域名精确查找（含软删，用于恢复） */
+  findTagByDomainAndName(domain: string, name: string): TagRow | undefined {
+    return this.databaseService
+      .getDb()
+      .prepare('SELECT * FROM tags WHERE domain = ? AND name = ?')
+      .get(domain, name) as TagRow | undefined;
+  }
+
+  /** 按名称查找未删除标签（任意域） */
+  findActiveTagByName(name: string): TagRow | undefined {
+    return this.databaseService
+      .getDb()
+      .prepare(
+        `SELECT * FROM tags WHERE name = ? AND deleted_at IS NULL
+         ORDER BY id ASC LIMIT 1`,
+      )
+      .get(name) as TagRow | undefined;
+  }
+
+  /** 插入标签并返回新 ID */
+  insertTag(input: {
+    domain: string;
+    name: string;
+    color: string | null;
+    sensitiveLevel: number;
+    isBuiltin: number;
+  }): number {
+    const result = this.databaseService
+      .getDb()
+      .prepare(
+        `INSERT INTO tags (domain, name, color, sensitive_level, is_builtin, deleted_at)
+         VALUES (?, ?, ?, ?, ?, NULL)`,
+      )
+      .run(
+        input.domain,
+        input.name,
+        input.color,
+        input.sensitiveLevel,
+        input.isBuiltin,
+      );
+    return Number(result.lastInsertRowid);
+  }
+
+  /** 恢复软删标签 */
+  restoreTag(id: number): void {
+    this.databaseService
+      .getDb()
+      .prepare('UPDATE tags SET deleted_at = NULL WHERE id = ?')
+      .run(id);
+  }
+
+  /** 按 ID 查询标签（含软删） */
+  findTagById(id: number): TagRow | undefined {
+    return this.databaseService
+      .getDb()
+      .prepare('SELECT * FROM tags WHERE id = ?')
+      .get(id) as TagRow | undefined;
+  }
+
   /** 查询学生的监护人列表 */
   listGuardiansByStudentId(studentId: number): GuardianRow[] {
     return this.databaseService
@@ -488,6 +567,46 @@ export class StudentsRepository {
     const tx = db.transaction(() => {
       for (const input of inputs) {
         ids.push(this.insertStudent(input));
+      }
+    });
+    tx();
+    return ids;
+  }
+
+  /**
+   * 批量导入学生并附带监护人（同一事务）。
+   * guardians 按序写入，isPrimary 由调用方指定。
+   */
+  insertStudentsWithGuardiansBatch(
+    items: Array<{
+      student: StudentInsertInput;
+      guardians: Array<{
+        name: string;
+        phone: string;
+        isPrimary: number;
+      }>;
+    }>,
+  ): number[] {
+    const db = this.databaseService.getDb();
+    const ids: number[] = [];
+    const tx = db.transaction(() => {
+      for (const item of items) {
+        const studentId = this.insertStudent(item.student);
+        ids.push(studentId);
+        for (const guardian of item.guardians) {
+          this.insertGuardian({
+            studentId,
+            relation: null,
+            name: guardian.name,
+            phone: guardian.phone,
+            wechat: null,
+            job: null,
+            contactPref: null,
+            bestTime: null,
+            isPrimary: guardian.isPrimary,
+            remark: null,
+          });
+        }
       }
     });
     tx();

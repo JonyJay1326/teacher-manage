@@ -42,6 +42,16 @@ export class ListStudentsQueryDto {
   @Min(1)
   @Max(200)
   pageSize?: number;
+
+  /** 排序字段：学号（默认）或关注等级 */
+  @IsOptional()
+  @IsIn(['studentNo', 'focusLevel'])
+  sortBy?: 'studentNo' | 'focusLevel';
+
+  /** 排序方向 */
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 }
 
 /** 新建学生 */
@@ -186,6 +196,24 @@ export class ReplaceTagsDto {
   tagIds!: number[];
 }
 
+/** 新建标签（花名册可加的普通标签） */
+export class CreateTagDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['学业', '行为情绪', '健康', '家庭', '特长', '其他'])
+  domain?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  color?: string;
+}
+
 /** 新建监护人 */
 export class CreateGuardianDto {
   @IsOptional()
@@ -288,8 +316,29 @@ export class ImportConfirmRowDto {
   @MaxLength(64)
   name!: string;
 
-  @IsIn(['create', 'skip', 'match'])
-  action!: 'create' | 'skip' | 'match';
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([0, 1])
+  gender?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  contact1?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  contact2?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  matchedId?: number;
+
+  @IsIn(['create', 'skip', 'update'])
+  action!: 'create' | 'skip' | 'update';
 }
 
 /** 粘贴导入确认 */

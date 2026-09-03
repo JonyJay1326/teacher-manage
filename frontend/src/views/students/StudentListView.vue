@@ -3,29 +3,32 @@
 	import { useRouter } from 'vue-router'
 	import { ElMessage, ElMessageBox } from 'element-plus'
 	import { ApiError } from '@/api/http'
-	import { createStudentApi, deleteStudentApi, importConfirmApi, importPreviewApi, listStudentsApi, listTagsApi, replaceStudentTagsApi, updateStudentApi } from '@/api/students'
+	import { createStudentApi, createTagApi, deleteStudentApi, importConfirmApi, importPreviewApi, listStudentsApi, listTagsApi, replaceStudentTagsApi, updateStudentApi } from '@/api/students'
 	import type { Student, StudentStatus, Tag } from '@/types'
 
 	/** 导入动作 */
-	type ImportAction = 'create' | 'skip' | 'match'
+	type ImportAction = 'create' | 'skip' | 'update'
 
 	/** 导入预览行 */
 	interface ImportPreviewRow {
 		studentNo?: string
 		name: string
+		gender: number | null
+		contact1?: string
+		contact2?: string
 		action: ImportAction
 		matchedId?: number
 		message?: string
 	}
 
-	/** 新建/编辑表单 */
+	/** 新建/编辑表单（标签选择可含新建中的字符串名） */
 	interface StudentFormModel {
 		studentNo: string
 		name: string
 		gender: 0 | 1
 		cadreRole: string
 		focusLevel: 0 | 1 | 2 | 3
-		tagIds: number[]
+		tagIds: Array<number | string>
 	}
 
 	const router = useRouter()
@@ -38,6 +41,9 @@
 	const searchText = ref('')
 	const filterFocusLevel = ref<number | ''>('')
 	const filterStatus = ref<StudentStatus | ''>('')
+	/** 列表排序：默认学号升序（数值自然序） */
+	const sortBy = ref<'studentNo' | 'focusLevel'>('studentNo')
+	const sortOrder = ref<'asc' | 'desc'>('asc')
 
 	const createVisible = ref(false)
 	const editVisible = ref(false)
@@ -84,6 +90,48 @@
 		}))
 	})
 
+	/**
+	 * 解析标签选择：数字为已有标签；字符串为新建名（回车创建后归入「其他」域）。
+	 */
+	async function resolveTagSelection(values: Array<number | string>): Promise<number[]> {
+		const nextIds: number[] = []
+		for (const value of values) {
+			if (typeof value === 'number') {
+				nextIds.push(value)
+				continue
+			}
+			const name = String(value).trim()
+			if (!name) continue
+			const existing = selectableTags.value.find((tag) => tag.name === name)
+			if (existing) {
+				nextIds.push(existing.id)
+				continue
+			}
+			const created = await createTagApi({ name, domain: '其他' })
+			tags.value.push(created)
+			nextIds.push(created.id)
+		}
+		return [...new Set(nextIds)]
+	}
+
+	/** 新建表单标签变更（支持输入新标签） */
+	async function onCreateTagChange(values: Array<number | string>): Promise<void> {
+		try {
+			createForm.value.tagIds = await resolveTagSelection(values)
+		} catch (err: unknown) {
+			ElMessage.error(err instanceof ApiError ? err.message : '创建标签失败')
+		}
+	}
+
+	/** 编辑表单标签变更（支持输入新标签） */
+	async function onEditTagChange(values: Array<number | string>): Promise<void> {
+		try {
+			editForm.value.tagIds = await resolveTagSelection(values)
+		} catch (err: unknown) {
+			ElMessage.error(err instanceof ApiError ? err.message : '创建标签失败')
+		}
+	}
+
 	/** 关注等级文案 */
 	function focusLevelLabel(level: number): string {
 		return ['普通', '关注', '重点', '最高'][level] ?? '普通'
@@ -98,29 +146,33 @@
 	}
 
 	/** 性别文案 */
-	function genderLabel(gender: number): string {
-		return gender === 1 ? '男' : '女'
+	function genderLabel(gender: number | null | undefined): string {
+		if (gender === 1) return '男'
+		if (gender === 0) return '女'
+		return '—'
 	}
 
 	/** 导入动作文案 */
 	function importActionLabel(action: ImportAction): string {
 		if (action === 'create') return '新建'
-		if (action === 'match') return '已匹配'
+		if (action === 'update') return '编辑'
 		return '跳过'
 	}
 
 	/** 导入动作标签类型 */
 	function importActionType(action: ImportAction): 'success' | 'info' | 'warning' {
 		if (action === 'create') return 'success'
-		if (action === 'match') return 'info'
-		return 'warning'
+		if (action === 'update') return 'warning'
+		return 'info'
 	}
 
 	/** 收窄导入动作为合法枚举 */
 	function normalizeImportAction(value: string): ImportAction {
-		if (value === 'create' || value === 'match' || value === 'skip') {
+		if (value === 'create' || value === 'update' || value === 'skip') {
 			return value
 		}
+		// 兼容旧预览值 match → 编辑
+		if (value === 'match') return 'update'
 		return 'skip'
 	}
 
@@ -149,9 +201,13 @@
 				focusLevel?: number
 				page: number
 				pageSize: number
+				sortBy: 'studentNo' | 'focusLevel'
+				sortOrder: 'asc' | 'desc'
 			} = {
 				page: 1,
-				pageSize: 200
+				pageSize: 200,
+				sortBy: sortBy.value,
+				sortOrder: sortOrder.value
 			}
 			const q = searchText.value.trim()
 			if (q) query.q = q
@@ -167,6 +223,24 @@
 		} finally {
 			listLoading.value = false
 		}
+	}
+
+	/** 表格列头排序变更 */
+	function onSortChange(payload: {
+		prop: string
+		order: 'ascending' | 'descending' | null
+	}): void {
+		if (
+			payload.order &&
+			(payload.prop === 'studentNo' || payload.prop === 'focusLevel')
+		) {
+			sortBy.value = payload.prop
+			sortOrder.value = payload.order === 'ascending' ? 'asc' : 'desc'
+		} else {
+			sortBy.value = 'studentNo'
+			sortOrder.value = 'asc'
+		}
+		void loadStudents()
 	}
 
 	/** 跳转学生详情 */
@@ -194,6 +268,8 @@
 		}
 		formSubmitting.value = true
 		try {
+			const tagIds = await resolveTagSelection(form.tagIds)
+			createForm.value.tagIds = tagIds
 			const created = await createStudentApi({
 				studentNo: form.studentNo.trim(),
 				name: form.name.trim(),
@@ -201,8 +277,8 @@
 				cadreRole: form.cadreRole.trim() || undefined,
 				focusLevel: form.focusLevel
 			})
-			if (form.tagIds.length > 0) {
-				await replaceStudentTagsApi(created.id, form.tagIds)
+			if (tagIds.length > 0) {
+				await replaceStudentTagsApi(created.id, tagIds)
 			}
 			ElMessage.success('学生已创建')
 			createVisible.value = false
@@ -254,6 +330,8 @@
 		}
 		formSubmitting.value = true
 		try {
+			const tagIds = await resolveTagSelection(form.tagIds)
+			editForm.value.tagIds = tagIds
 			await updateStudentApi(id, {
 				studentNo: form.studentNo.trim(),
 				name: form.name.trim(),
@@ -261,7 +339,7 @@
 				cadreRole: form.cadreRole.trim() || null,
 				focusLevel: form.focusLevel
 			})
-			await replaceStudentTagsApi(id, form.tagIds)
+			await replaceStudentTagsApi(id, tagIds)
 			ElMessage.success('学生已更新')
 			editVisible.value = false
 			await loadStudents()
@@ -300,7 +378,7 @@
 	async function previewImport(): Promise<void> {
 		const text = importText.value.trim()
 		if (!text) {
-			ElMessage.warning('请先粘贴姓名列或学号+姓名')
+			ElMessage.warning('请先粘贴花名册内容')
 			return
 		}
 		importLoading.value = true
@@ -309,8 +387,12 @@
 			importRows.value = result.rows.map((row) => ({
 				studentNo: row.studentNo,
 				name: row.name,
+				gender: row.gender === 0 || row.gender === 1 ? row.gender : null,
+				contact1: row.contact1,
+				contact2: row.contact2,
 				action: normalizeImportAction(row.action),
-				matchedId: row.matchedId
+				matchedId: row.matchedId,
+				message: row.message
 			}))
 			importStep.value = 'preview'
 		} catch (err: unknown) {
@@ -332,10 +414,16 @@
 				importRows.value.map((row) => ({
 					studentNo: row.studentNo,
 					name: row.name,
-					action: row.action
+					gender: row.gender,
+					contact1: row.contact1 ?? null,
+					contact2: row.contact2 ?? null,
+					action: row.action,
+					matchedId: row.matchedId
 				}))
 			)
-			ElMessage.success(`导入完成：新建 ${result.created}，跳过 ${result.skipped}`)
+			ElMessage.success(
+				`导入完成：新建 ${result.created}，编辑 ${result.updated}，跳过 ${result.skipped}`
+			)
 			importVisible.value = false
 			await loadStudents()
 		} catch (err: unknown) {
@@ -408,9 +496,11 @@
 				:data="students"
 				:stripe="false"
 				:row-class-name="studentRowClassName"
+				:default-sort="{ prop: 'studentNo', order: 'ascending' }"
 				@row-click="handleRowClick"
+				@sort-change="onSortChange"
 			>
-				<el-table-column prop="studentNo" label="学号" width="110" fixed>
+				<el-table-column prop="studentNo" label="学号" width="110" fixed sortable="custom">
 					<template #default="{ row }">
 						<span class="cp-tabular-nums">{{ row.studentNo }}</span>
 					</template>
@@ -427,7 +517,7 @@
 						<span v-else class="student-list__empty-cell">—</span>
 					</template>
 				</el-table-column>
-				<el-table-column label="关注等级" width="100" align="center">
+				<el-table-column prop="focusLevel" label="关注等级" width="120" align="center" sortable="custom">
 					<template #default="{ row }">
 						<el-tag :type="focusLevelType(row.focusLevel)" size="default">
 							{{ focusLevelLabel(row.focusLevel) }}
@@ -493,10 +583,14 @@
 						v-model="createForm.tagIds"
 						multiple
 						filterable
+						allow-create
+						default-first-option
+						:reserve-keyword="false"
 						collapse-tags
 						collapse-tags-tooltip
-						placeholder="可选，支持多选"
+						placeholder="选择或输入新标签后回车"
 						style="width: 100%"
+						@change="onCreateTagChange"
 					>
 						<el-option-group v-for="group in tagOptionGroups" :key="group.domain" :label="group.domain">
 							<el-option v-for="tag in group.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
@@ -541,10 +635,14 @@
 						v-model="editForm.tagIds"
 						multiple
 						filterable
+						allow-create
+						default-first-option
+						:reserve-keyword="false"
 						collapse-tags
 						collapse-tags-tooltip
-						placeholder="可选，支持多选"
+						placeholder="选择或输入新标签后回车"
 						style="width: 100%"
+						@change="onEditTagChange"
 					>
 						<el-option-group v-for="group in tagOptionGroups" :key="group.domain" :label="group.domain">
 							<el-option v-for="tag in group.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
@@ -559,21 +657,43 @@
 		</el-dialog>
 
 		<!-- 粘贴导入 -->
-		<el-dialog v-model="importVisible" title="粘贴导入花名册" width="640px" append-to-body align-center destroy-on-close>
+		<el-dialog v-model="importVisible" title="粘贴导入花名册" width="720px" append-to-body align-center destroy-on-close>
 			<template v-if="importStep === 'paste'">
-				<p class="student-list__import-hint">从 Excel 粘贴：仅姓名一列，或学号+姓名两列（Tab / 逗号分隔），每行一名学生。</p>
-				<el-input v-model="importText" type="textarea" :rows="8" placeholder="例如：&#10;20240101&#9;张三&#10;20240102&#9;李四&#10;或：&#10;张三&#10;李四" />
+				<p class="student-list__import-hint">
+					从 Excel 粘贴（Tab / 逗号分隔），每行一名学生。支持：姓名；学号+姓名；学号+姓名+性别+联系方式1+联系方式2。有联系方式时将自动生成监护人1/监护人2。
+				</p>
+				<el-input
+					v-model="importText"
+					type="textarea"
+					:rows="8"
+					placeholder="例如：&#10;20240101&#9;张三&#9;男&#9;13800000001&#9;13900000002&#10;20240102&#9;李四&#9;女&#9;13700000003&#10;或仅：&#10;张三&#10;李四"
+				/>
 			</template>
 			<template v-else>
 				<p class="student-list__import-hint">预览共 {{ importRows.length }} 行，其中将新建 {{ importCreateCount }} 人。</p>
 				<el-table :data="importRows" max-height="360" size="default">
-					<el-table-column label="学号" width="120">
+					<el-table-column label="学号" width="110">
 						<template #default="{ row }">
 							<span class="cp-tabular-nums">{{ row.studentNo || '—' }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="name" label="姓名" min-width="100" />
-					<el-table-column label="动作" width="100" align="center">
+					<el-table-column prop="name" label="姓名" min-width="80" />
+					<el-table-column label="性别" width="64" align="center">
+						<template #default="{ row }">
+							{{ genderLabel(row.gender) }}
+						</template>
+					</el-table-column>
+					<el-table-column label="联系方式1" min-width="120">
+						<template #default="{ row }">
+							<span class="cp-tabular-nums">{{ row.contact1 || '—' }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column label="联系方式2" min-width="120">
+						<template #default="{ row }">
+							<span class="cp-tabular-nums">{{ row.contact2 || '—' }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column label="动作" width="88" align="center">
 						<template #default="{ row }">
 							<el-tag :type="importActionType(row.action)" effect="plain" size="default">
 								{{ importActionLabel(row.action) }}

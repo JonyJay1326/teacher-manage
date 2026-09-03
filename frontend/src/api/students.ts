@@ -8,6 +8,8 @@ export interface StudentListQuery {
   focusLevel?: number;
   page?: number;
   pageSize?: number;
+  sortBy?: 'studentNo' | 'focusLevel';
+  sortOrder?: 'asc' | 'desc';
 }
 
 /** 监护人 */
@@ -45,6 +47,8 @@ export function listStudentsApi(
   if (query.focusLevel !== undefined) params.set('focusLevel', String(query.focusLevel));
   if (query.page) params.set('page', String(query.page));
   if (query.pageSize) params.set('pageSize', String(query.pageSize));
+  if (query.sortBy) params.set('sortBy', query.sortBy);
+  if (query.sortOrder) params.set('sortOrder', query.sortOrder);
   const qs = params.toString();
   return httpGet(`/v1/students${qs ? `?${qs}` : ''}`);
 }
@@ -85,6 +89,15 @@ export function listTagsApi(): Promise<Tag[]> {
   return httpGet('/v1/tags');
 }
 
+/** 新建标签（默认域「其他」、L0） */
+export function createTagApi(body: {
+  name: string;
+  domain?: Tag['domain'];
+  color?: string;
+}): Promise<Tag> {
+  return httpPost('/v1/tags', body);
+}
+
 /** 监护人列表 */
 export function listGuardiansApi(studentId: number): Promise<GuardianDto[]> {
   return httpGet(`/v1/students/${studentId}/guardians`);
@@ -112,16 +125,33 @@ export function deleteGuardianApi(guardianId: number): Promise<{ ok: boolean }> 
 }
 
 /** 导入预览 */
-export function importPreviewApi(
-  text: string,
-): Promise<{ rows: Array<{ studentNo?: string; name: string; action: string; matchedId?: number }> }> {
+export function importPreviewApi(text: string): Promise<{
+  rows: Array<{
+    studentNo?: string;
+    name: string;
+    gender?: number | null;
+    contact1?: string;
+    contact2?: string;
+    action: string;
+    matchedId?: number;
+    message?: string;
+  }>;
+}> {
   return httpPost('/v1/students/import/preview', { text });
 }
 
 /** 导入确认 */
 export function importConfirmApi(
-  rows: Array<{ studentNo?: string; name: string; action: string }>,
-): Promise<{ created: number; skipped: number }> {
+  rows: Array<{
+    studentNo?: string;
+    name: string;
+    gender?: number | null;
+    contact1?: string | null;
+    contact2?: string | null;
+    action: string;
+    matchedId?: number;
+  }>,
+): Promise<{ created: number; skipped: number; updated: number }> {
   return httpPost('/v1/students/import/confirm', { rows });
 }
 

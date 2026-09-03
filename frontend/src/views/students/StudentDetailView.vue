@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Lock, Unlock } from '@element-plus/icons-vue';
+import { Lock, Unlock, ChatDotRound, Flag, User, CollectionTag, Phone, Plus, EditPen, Delete, Ticket, Male, Female } from '@element-plus/icons-vue';
 import VChart from '@/components/VChart.vue';
 import type { EChartsOption } from 'echarts';
 import {
@@ -20,6 +20,7 @@ import {
   listGuardiansApi,
   listSensitiveApi,
   listTagsApi,
+  createTagApi,
   replaceStudentTagsApi,
   updateGuardianApi,
   updateStudentApi,
@@ -125,7 +126,8 @@ const guardianForm = ref<GuardianFormModel>(emptyGuardianForm());
 
 const tagDialogVisible = ref(false);
 const tagSubmitting = ref(false);
-const tagSelectedIds = ref<number[]>([]);
+/** 选中的标签 id；输入新建时短暂可为字符串名 */
+const tagSelectedIds = ref<Array<number | string>>([]);
 
 /** 关注等级选项 */
 const focusLevelOptions = [
@@ -187,7 +189,7 @@ function maskPhone(phone: string | null | undefined): string {
 /** 组装监护人元信息文案 */
 function guardianMetaText(guardian: GuardianDto): string {
   const parts: string[] = [];
-  parts.push(`电话 ${maskPhone(guardian.phone)}`);
+  parts.push(maskPhone(guardian.phone));
   if (guardian.contactPref) {
     parts.push(`偏好：${guardian.contactPref}`);
   }
@@ -776,11 +778,56 @@ function openTagDialog(): void {
   tagDialogVisible.value = true;
 }
 
+/**
+ * 解析标签选择：数字为已有标签；字符串为新建名（回车创建后归入「其他」域）。
+ */
+async function resolveTagSelection(
+  values: Array<number | string>,
+): Promise<number[]> {
+  const nextIds: number[] = [];
+  for (const value of values) {
+    if (typeof value === 'number') {
+      nextIds.push(value);
+      continue;
+    }
+    const name = String(value).trim();
+    if (!name) continue;
+    const existing = selectableTags.value.find((tag) => tag.name === name);
+    if (existing) {
+      nextIds.push(existing.id);
+      continue;
+    }
+    const created = await createTagApi({ name, domain: '其他' });
+    tags.value.push(created);
+    nextIds.push(created.id);
+  }
+  return [...new Set(nextIds)];
+}
+
+/** 标签多选变更（支持输入新标签名后创建） */
+async function onTagSelectionChange(
+  values: Array<number | string>,
+): Promise<void> {
+  try {
+    tagSelectedIds.value = await resolveTagSelection(values);
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof ApiError ? err.message : '创建标签失败');
+    if (student.value) {
+      const allowedIds = new Set(selectableTags.value.map((tag) => tag.id));
+      tagSelectedIds.value = student.value.tagIds.filter((id) =>
+        allowedIds.has(id),
+      );
+    }
+  }
+}
+
 /** 保存学生标签 */
 async function submitTags(): Promise<void> {
   tagSubmitting.value = true;
   try {
-    const updated = await replaceStudentTagsApi(studentId, tagSelectedIds.value);
+    const tagIds = await resolveTagSelection(tagSelectedIds.value);
+    tagSelectedIds.value = tagIds;
+    const updated = await replaceStudentTagsApi(studentId, tagIds);
     if (student.value) {
       student.value.tagIds = updated.tagIds;
     }
@@ -1018,26 +1065,43 @@ watch(activeTab, (tab) => {
       <!-- 头部信息条 -->
       <el-card shadow="never" class="student-detail__header">
         <div class="student-detail__header-inner">
-          <el-avatar :size="64" shape="square" class="student-detail__photo">
+          <el-avatar :size="72" shape="square" class="student-detail__photo">
             {{ student.name.charAt(0) }}
           </el-avatar>
           <div class="student-detail__info">
             <div class="student-detail__name-row">
               <h2 class="student-detail__name">{{ student.name }}</h2>
-              <span class="student-detail__no cp-tabular-nums">{{ student.studentNo }}</span>
+              <span class="student-detail__no cp-tabular-nums">
+                <el-icon class="student-detail__no-icon"><Ticket /></el-icon>
+                {{ student.studentNo }}
+              </span>
               <el-tag v-if="student.cadreRole" type="primary" effect="dark" size="default">
                 {{ student.cadreRole }}
               </el-tag>
             </div>
             <el-space :size="8" wrap class="student-detail__meta">
-              <el-tag effect="plain">{{ student.gender === 1 ? '男' : '女' }}</el-tag>
-              <el-tag type="success" effect="plain">{{ student.status }}</el-tag>
+              <el-tag effect="plain" class="student-detail__meta-tag">
+                <el-icon>
+                  <Male v-if="student.gender === 1" />
+                  <Female v-else />
+                </el-icon>
+                {{ student.gender === 1 ? '男' : '女' }}
+              </el-tag>
+              <el-tag type="success" effect="plain" class="student-detail__meta-tag">
+                {{ student.status }}
+              </el-tag>
             </el-space>
           </div>
           <div class="student-detail__focus">
-            <el-button @click="goDataAsk">问该生学情</el-button>
+            <el-button type="primary" plain @click="goDataAsk">
+              <el-icon><ChatDotRound /></el-icon>
+              问该生学情
+            </el-button>
             <div class="student-detail__focus-block">
-              <span class="student-detail__focus-label">关注等级</span>
+              <span class="student-detail__focus-label">
+                <el-icon><Flag /></el-icon>
+                关注等级
+              </span>
               <el-select
                 v-model="focusLevel"
                 style="width: 120px"
@@ -1064,20 +1128,70 @@ watch(activeTab, (tab) => {
               <div v-if="activeTab === 'archive'" class="archive-grid">
                 <el-card shadow="never" class="archive-block">
                   <template #header>
-                    <span class="archive-block__title">基本信息</span>
+                    <div class="archive-block__heading">
+                      <el-icon class="archive-block__icon"><User /></el-icon>
+                      <span class="archive-block__title">基本信息</span>
+                    </div>
                   </template>
-                  <el-descriptions :column="2" border>
-                    <el-descriptions-item label="学号">{{ student.studentNo }}</el-descriptions-item>
-                    <el-descriptions-item label="性别">{{ student.gender === 1 ? '男' : '女' }}</el-descriptions-item>
-                    <el-descriptions-item label="班干部">{{ student.cadreRole ?? '—' }}</el-descriptions-item>
-                    <el-descriptions-item label="状态">{{ student.status }}</el-descriptions-item>
-                  </el-descriptions>
+                  <div class="archive-info-grid">
+                    <div class="archive-info-item">
+                      <span class="archive-info-item__label">
+                        <el-icon><Ticket /></el-icon>
+                        学号
+                      </span>
+                      <span class="archive-info-item__value cp-tabular-nums">{{
+                        student.studentNo
+                      }}</span>
+                    </div>
+                    <div class="archive-info-item">
+                      <span class="archive-info-item__label">
+                        <el-icon>
+                          <Male v-if="student.gender === 1" />
+                          <Female v-else />
+                        </el-icon>
+                        性别
+                      </span>
+                      <span class="archive-info-item__value">{{
+                        student.gender === 1 ? '男' : '女'
+                      }}</span>
+                    </div>
+                    <div class="archive-info-item">
+                      <span class="archive-info-item__label">
+                        <el-icon><Flag /></el-icon>
+                        班干部
+                      </span>
+                      <span class="archive-info-item__value">{{
+                        student.cadreRole ?? '—'
+                      }}</span>
+                    </div>
+                    <div class="archive-info-item">
+                      <span class="archive-info-item__label">
+                        <el-icon><User /></el-icon>
+                        状态
+                      </span>
+                      <span class="archive-info-item__value">{{ student.status }}</span>
+                    </div>
+                  </div>
                 </el-card>
+
                 <el-card shadow="never" class="archive-block">
                   <template #header>
-                    <span class="archive-block__title">标签</span>
+                    <div class="archive-block__heading archive-block__heading--spread">
+                      <div class="archive-block__heading-main">
+                        <el-icon class="archive-block__icon"><CollectionTag /></el-icon>
+                        <span class="archive-block__title">标签</span>
+                      </div>
+                      <el-button text type="primary" @click="openTagDialog">
+                        <el-icon><EditPen /></el-icon>
+                        编辑标签
+                      </el-button>
+                    </div>
                   </template>
-                  <el-space wrap :size="8">
+                  <el-space
+                    v-if="getVisibleTags(student.tagIds).length > 0"
+                    wrap
+                    :size="8"
+                  >
                     <el-tag
                       v-for="tag in getVisibleTags(student.tagIds)"
                       :key="tag.id"
@@ -1087,22 +1201,19 @@ watch(activeTab, (tab) => {
                     >
                       {{ tag.name }}
                     </el-tag>
-                    <span
-                      v-if="getVisibleTags(student.tagIds).length === 0"
-                      class="guardian-card__meta"
-                    >
-                      暂无标签
-                    </span>
-                    <el-button text type="primary" @click="openTagDialog">
-                      编辑标签
-                    </el-button>
                   </el-space>
+                  <p v-else class="archive-empty">暂无标签，点击右上角添加</p>
                 </el-card>
+
                 <el-card shadow="never" class="archive-block">
                   <template #header>
-                    <div class="guardian-card__header">
-                      <span class="archive-block__title">监护人</span>
+                    <div class="archive-block__heading archive-block__heading--spread">
+                      <div class="archive-block__heading-main">
+                        <el-icon class="archive-block__icon"><Phone /></el-icon>
+                        <span class="archive-block__title">监护人</span>
+                      </div>
                       <el-button type="primary" text @click="openCreateGuardian">
+                        <el-icon><Plus /></el-icon>
                         添加监护人
                       </el-button>
                     </div>
@@ -1112,29 +1223,56 @@ watch(activeTab, (tab) => {
                     description="暂无监护人"
                     :image-size="64"
                   />
-                  <div
-                    v-for="guardian in guardians"
-                    :key="guardian.id"
-                    class="guardian-card"
-                  >
-                    <div class="guardian-card__row">
-                      <span class="guardian-card__name">
-                        {{ guardian.name ?? '未命名' }}
-                        <template v-if="guardian.relation">（{{ guardian.relation }}）</template>
-                      </span>
-                      <el-tag v-if="guardian.isPrimary" type="primary" effect="plain">
-                        主联系人
-                      </el-tag>
+                  <div v-else class="guardian-list">
+                    <div
+                      v-for="guardian in guardians"
+                      :key="guardian.id"
+                      class="guardian-card"
+                    >
+                      <div class="guardian-card__avatar" aria-hidden="true">
+                        {{ (guardian.name ?? '监').charAt(0) }}
+                      </div>
+                      <div class="guardian-card__body">
+                        <div class="guardian-card__row">
+                          <span class="guardian-card__name">
+                            {{ guardian.name ?? '未命名' }}
+                            <template v-if="guardian.relation"
+                              >（{{ guardian.relation }}）</template
+                            >
+                          </span>
+                          <el-tag
+                            v-if="guardian.isPrimary"
+                            type="primary"
+                            effect="plain"
+                            size="small"
+                          >
+                            主联系人
+                          </el-tag>
+                        </div>
+                        <p class="guardian-card__meta">
+                          <el-icon><Phone /></el-icon>
+                          {{ guardianMetaText(guardian) }}
+                        </p>
+                      </div>
                       <el-space :size="4" class="guardian-card__actions">
-                        <el-button text type="primary" @click="openEditGuardian(guardian)">
+                        <el-button
+                          text
+                          type="primary"
+                          @click="openEditGuardian(guardian)"
+                        >
+                          <el-icon><EditPen /></el-icon>
                           编辑
                         </el-button>
-                        <el-button text type="danger" @click="handleDeleteGuardian(guardian)">
+                        <el-button
+                          text
+                          type="danger"
+                          @click="handleDeleteGuardian(guardian)"
+                        >
+                          <el-icon><Delete /></el-icon>
                           删除
                         </el-button>
                       </el-space>
                     </div>
-                    <p class="guardian-card__meta">{{ guardianMetaText(guardian) }}</p>
                   </div>
                 </el-card>
               </div>
@@ -1575,10 +1713,14 @@ watch(activeTab, (tab) => {
             v-model="tagSelectedIds"
             multiple
             filterable
+            allow-create
+            default-first-option
+            :reserve-keyword="false"
             collapse-tags
             collapse-tags-tooltip
-            placeholder="选择标签（可多选）"
+            placeholder="选择或输入新标签后回车"
             style="width: 100%"
+            @change="onTagSelectionChange"
           >
             <el-option-group
               v-for="group in tagOptionGroups"
@@ -1593,6 +1735,7 @@ watch(activeTab, (tab) => {
               />
             </el-option-group>
           </el-select>
+          <p class="tag-dialog__hint">新标签将归入「其他」域，敏感级别为普通</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -1606,10 +1749,20 @@ watch(activeTab, (tab) => {
 </template>
 
 <style scoped>
+.tag-dialog__hint {
+  margin: var(--cp-gap-2) 0 0;
+  font-size: var(--cp-font-sm);
+  color: var(--cp-text-3);
+  line-height: 1.5;
+}
+
 .student-detail__header {
   margin-bottom: var(--cp-gap-4);
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-card);
+  background:
+    linear-gradient(135deg, var(--cp-primary-bg) 0%, transparent 42%),
+    var(--cp-bg-card);
 }
 
 .student-detail__header-inner {
@@ -1620,11 +1773,12 @@ watch(activeTab, (tab) => {
 
 .student-detail__photo {
   border-radius: var(--cp-radius-card);
-  background: var(--cp-primary-bg-strong);
-  color: var(--cp-primary);
+  background: linear-gradient(145deg, var(--cp-primary) 0%, var(--cp-primary-active) 100%);
+  color: #fff;
   font-size: 28px;
   font-weight: 700;
   flex-shrink: 0;
+  box-shadow: var(--cp-shadow-1);
 }
 
 .student-detail__info {
@@ -1651,8 +1805,22 @@ watch(activeTab, (tab) => {
 }
 
 .student-detail__no {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--cp-font-base);
   color: var(--cp-text-2);
+}
+
+.student-detail__no-icon {
+  font-size: 14px;
+  color: var(--cp-primary);
+}
+
+.student-detail__meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .student-detail__focus {
@@ -1670,6 +1838,9 @@ watch(activeTab, (tab) => {
 }
 
 .student-detail__focus-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--cp-font-sm);
   font-weight: 500;
   color: var(--cp-text-2);
@@ -1698,6 +1869,34 @@ watch(activeTab, (tab) => {
 
 .archive-block {
   border: 1px solid var(--cp-divider);
+  border-radius: var(--cp-radius-card);
+}
+
+.archive-block :deep(.el-card__header) {
+  padding: var(--cp-gap-3) var(--cp-gap-4);
+  border-bottom: 1px solid var(--cp-divider);
+  background: var(--cp-bg-page);
+}
+
+.archive-block__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-gap-2);
+}
+
+.archive-block__heading--spread {
+  justify-content: space-between;
+}
+
+.archive-block__heading-main {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-gap-2);
+}
+
+.archive-block__icon {
+  font-size: 18px;
+  color: var(--cp-primary);
 }
 
 .archive-block__title {
@@ -1706,32 +1905,94 @@ watch(activeTab, (tab) => {
   color: var(--cp-text-1);
 }
 
-.archive-block :deep(.el-descriptions__label),
-.archive-block :deep(.el-descriptions__content) {
+.archive-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cp-gap-3);
+}
+
+.archive-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--cp-gap-3);
+  border-radius: var(--cp-radius-ctl);
+  background: var(--cp-bg-page);
+  border: 1px solid var(--cp-divider);
+}
+
+.archive-info-item__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--cp-font-sm);
+  color: var(--cp-text-3);
+}
+
+.archive-info-item__value {
+  font-size: var(--cp-font-base);
+  font-weight: 600;
+  color: var(--cp-text-1);
+  line-height: 1.35;
+}
+
+.archive-empty {
+  margin: 0;
+  font-size: var(--cp-font-sm);
+  color: var(--cp-text-3);
+  line-height: 1.6;
+}
+
+.guardian-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-gap-3);
+}
+
+.guardian-card {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-gap-3);
+  padding: var(--cp-gap-3);
+  border: 1px solid var(--cp-divider);
+  border-radius: var(--cp-radius-card);
+  background: var(--cp-bg-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guardian-card:hover {
+  border-color: var(--cp-primary-border);
+  box-shadow: var(--cp-shadow-1);
+}
+
+.guardian-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--cp-primary-bg);
+  color: var(--cp-primary);
+  font-weight: 700;
   font-size: var(--cp-font-base);
 }
 
-.guardian-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.guardian-card + .guardian-card {
-  margin-top: var(--cp-gap-4);
-  padding-top: var(--cp-gap-4);
-  border-top: 1px solid var(--cp-divider);
+.guardian-card__body {
+  flex: 1;
+  min-width: 0;
 }
 
 .guardian-card__row {
   display: flex;
   align-items: center;
   gap: var(--cp-gap-2);
-  margin-bottom: var(--cp-gap-2);
+  margin-bottom: 4px;
 }
 
 .guardian-card__actions {
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .guardian-card__name {
@@ -1741,6 +2002,9 @@ watch(activeTab, (tab) => {
 
 .guardian-card__meta {
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--cp-font-sm);
   color: var(--cp-text-2);
   line-height: 1.6;
