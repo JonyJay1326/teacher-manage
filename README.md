@@ -57,8 +57,8 @@ npm run dev
 # 仅本地构建（Git Bash / WSL）
 bash deploy/deploy.sh
 
-# 构建并同步到服务器（需本机已配置 SSH）
-DEPLOY_HOST=ubuntu@你的公网IP bash deploy/deploy.sh
+# 构建并同步到服务器（需本机已配置 SSH；发布账号为 root）
+DEPLOY_HOST=root@你的公网IP bash deploy/deploy.sh
 ```
 
 首次上线还需在服务器写好 `backend/.env`（含 `COOKIE_SECURE=false`）、创建管理员：
@@ -74,14 +74,14 @@ node dist/cli/create-user.js <username> <password> [displayName]
 
 ```bash
 ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519_classpilot_deploy
-ssh-copy-id -i ~/.ssh/id_ed25519_classpilot_deploy.pub ubuntu@你的公网IP
+ssh-copy-id -i ~/.ssh/id_ed25519_classpilot_deploy.pub root@你的公网IP
 ```
 
-2. 仓库 **Settings → Secrets and variables → Actions** 新增：
+2. 仓库 **Settings → Secrets and variables → Actions** 新增/更新：
 
 | Name | 值 |
 |------|-----|
-| `DEPLOY_HOST` | `ubuntu@你的公网IP` |
+| `DEPLOY_HOST` | `root@你的公网IP` |
 | `DEPLOY_SSH_KEY` | `~/.ssh/id_ed25519_classpilot_deploy` **私钥全文**（含 `BEGIN`/`END` 行） |
 
 可选：`DEPLOY_APP_PATH`、`DEPLOY_WEB_PATH`（默认已是上面目录）。
@@ -89,6 +89,11 @@ ssh-copy-id -i ~/.ssh/id_ed25519_classpilot_deploy.pub ubuntu@你的公网IP
 3. 把 `.github/workflows/deploy.yml` 推到 `main` 后，每次 push `main` 会自动构建并发布；也可在 Actions 页手动 **Run workflow**。
 
 **不会**覆盖服务器上的 `.env`、`data/`、`uploads/`。
+
+> **运行时 Node**：服务器 apt 自带的 `/usr/bin/node` 可能是 v12，而 1Panel/root 的 nvm 才是 v24。  
+> pm2 若落到 Node 12，Nest 会启动失败，表现为登录/`/api/health` **502**。  
+> 部署脚本会把可用的 Node≥18 落到 `/usr/local/bin/node`，并用它启动 pm2；**不是**打包机 Node 版本问题。  
+> **发布与 pm2 统一使用 root**，避免 1Panel 终端（root）与部署账号（曾用 ubuntu）互相看不到进程。
 
 ## 技术栈
 

@@ -2,15 +2,16 @@
 # ClassPilot 一键部署（适配 1Panel + 无域名 IP 访问）
 # 用法（在项目根目录）：
 #   仅本地构建：  bash deploy/deploy.sh
-#   构建并同步：  DEPLOY_HOST=ubuntu@公网IP bash deploy/deploy.sh
+#   构建并同步：  DEPLOY_HOST=root@公网IP bash deploy/deploy.sh
 #
 # 环境变量：
-#   DEPLOY_HOST          必填才同步，如 ubuntu@1.2.3.4
+#   DEPLOY_HOST          必填才同步，如 root@1.2.3.4
 #   DEPLOY_APP_PATH      后端与数据根目录，默认 /opt/classpilot
 #   DEPLOY_WEB_PATH      1Panel 网站运行目录，默认 /opt/1panel/www/sites/classpilot/index
 #   FORCE_NPM_CI=1       强制重新 npm ci（Windows 上若 esbuild 被占用会 EPERM，先关 Vite）
 #
 # 说明：整包一次 tar|ssh 上传（只需输一次密码）。勿用 ControlMaster（Git Bash/Windows 常失败）。
+# 发布账号固定为 root（与 1Panel 终端一致，避免 ubuntu/root 双 pm2 互相看不到）。
 
 set -euo pipefail
 
@@ -59,7 +60,7 @@ if [[ -z "$DEPLOY_HOST" ]]; then
   echo "未设置 DEPLOY_HOST，仅完成本地构建。"
   echo "前端产物: $ROOT_DIR/frontend/dist"
   echo "后端产物: $ROOT_DIR/backend/dist"
-  echo "示例: DEPLOY_HOST=ubuntu@1.2.3.4 bash deploy/deploy.sh"
+  echo "示例: DEPLOY_HOST=root@1.2.3.4 bash deploy/deploy.sh"
   exit 0
 fi
 
@@ -78,12 +79,13 @@ cp -R "$ROOT_DIR/backend/migrations/." "$STAGE/backend/migrations/"
 cp "$ROOT_DIR/backend/package.json" "$ROOT_DIR/backend/package-lock.json" "$STAGE/backend/"
 cp "$ROOT_DIR/backend/.env.example" "$STAGE/backend/"
 cp "$ROOT_DIR/deploy/ecosystem.config.cjs" "$STAGE/"
+cp "$ROOT_DIR/deploy/ensure-node.sh" "$STAGE/"
 
 echo "==> 同步到 $DEPLOY_HOST（一次 SSH，输入一次密码）"
 echo "    前端 → $DEPLOY_WEB_PATH"
 echo "    后端 → $DEPLOY_APP_PATH/backend"
 
-# 远端：解压 → 覆盖站点与后端 → 装依赖（lock 未变则跳过）→ pm2
+# 远端：解压 → 覆盖站点与后端 → 装依赖（lock 未变则跳过）→ 确保 Node>=18 → pm2
 (
   cd "$STAGE"
   tar czf - .
@@ -103,6 +105,9 @@ cp -R \"\$TMP/backend/dist/.\" \"\$APP/backend/dist/\"
 cp -R \"\$TMP/backend/migrations/.\" \"\$APP/backend/migrations/\"
 cp \"\$TMP/backend/package.json\" \"\$TMP/backend/package-lock.json\" \"\$TMP/backend/.env.example\" \"\$APP/backend/\"
 cp \"\$TMP/ecosystem.config.cjs\" \"\$APP/\"
+cp \"\$TMP/ensure-node.sh\" \"\$APP/\"
+bash \"\$APP/ensure-node.sh\"
+export PATH=\"/usr/local/bin:\$PATH\"
 cd \"\$APP/backend\"
 LOCK_HASH=\$(sha256sum package-lock.json | awk '{print \$1}')
 if [[ -d node_modules && -f .deps-lock-sha256 && \"\$(cat .deps-lock-sha256)\" == \"\$LOCK_HASH\" ]]; then
@@ -113,10 +118,12 @@ else
   echo \"\$LOCK_HASH\" > .deps-lock-sha256
 fi
 if command -v pm2 >/dev/null 2>&1; then
-  pm2 startOrReload \"\$APP/ecosystem.config.cjs\"
+  # delete+start 才能可靠切换 interpreter（仅 reload 可能仍用旧 Node 12）
+  pm2 delete classpilot-backend >/dev/null 2>&1 || true
+  pm2 start \"\$APP/ecosystem.config.cjs\"
   pm2 save || true
 else
-  echo '未安装 pm2。请执行: sudo npm i -g pm2 && pm2 startOrReload '\"\$APP/ecosystem.config.cjs\"
+  echo '未安装 pm2。请执行: sudo npm i -g pm2 && pm2 start '\"\$APP/ecosystem.config.cjs\"
 fi
 echo REMOTE_OK
 "

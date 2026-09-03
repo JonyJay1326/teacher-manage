@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${DEPLOY_HOST:-}" ]]; then
-            echo "::error::缺少 Secret DEPLOY_HOST（例如 ubuntu@115.159.190.215）"
+            echo "::error::缺少 Secret DEPLOY_HOST（例如 root@115.159.190.215）"
             exit 1
           fi
           if [[ -z "${DEPLOY_SSH_KEY:-}" ]]; then
@@ -83,6 +83,7 @@ jobs:
           cp -R backend/migrations/. "$STAGE/backend/migrations/"
           cp backend/package.json backend/package-lock.json backend/.env.example "$STAGE/backend/"
           cp deploy/ecosystem.config.cjs "$STAGE/"
+          cp deploy/ensure-node.sh "$STAGE/"
 
           # gzip 压缩上传（轻量机带宽有限）；远端仅在 lock 变化时 npm ci
           (
@@ -104,6 +105,9 @@ jobs:
           cp -R \"\$TMP/backend/migrations/.\" \"\$APP/backend/migrations/\"
           cp \"\$TMP/backend/package.json\" \"\$TMP/backend/package-lock.json\" \"\$TMP/backend/.env.example\" \"\$APP/backend/\"
           cp \"\$TMP/ecosystem.config.cjs\" \"\$APP/\"
+          cp \"\$TMP/ensure-node.sh\" \"\$APP/\"
+          bash \"\$APP/ensure-node.sh\"
+          export PATH=\"/usr/local/bin:\$PATH\"
           cd \"\$APP/backend\"
           LOCK_HASH=\$(sha256sum package-lock.json | awk '{print \$1}')
           if [[ -d node_modules && -f .deps-lock-sha256 && \"\$(cat .deps-lock-sha256)\" == \"\$LOCK_HASH\" ]]; then
@@ -113,7 +117,9 @@ jobs:
             npm ci --omit=dev
             echo \"\$LOCK_HASH\" > .deps-lock-sha256
           fi
-          pm2 startOrReload \"\$APP/ecosystem.config.cjs\"
+          # delete+start 才能可靠切换 interpreter（仅 reload 可能仍用旧 Node 12）
+          pm2 delete classpilot-backend >/dev/null 2>&1 || true
+          pm2 start \"\$APP/ecosystem.config.cjs\"
           pm2 save || true
           echo REMOTE_OK
           "
