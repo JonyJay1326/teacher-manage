@@ -128,7 +128,7 @@ onMounted(() => {
       <el-card shadow="never" class="talk-script__panel">
         <h3 class="talk-script__title">生成结果</h3>
         <p v-if="message" class="talk-script__msg">{{ message }}</p>
-        <div v-if="draftHtml" class="talk-script__draft" v-html="draftHtml" />
+        <div v-if="draftHtml" class="talk-script__draft cp-reading" v-html="draftHtml" />
         <el-empty v-else description="生成后显示草稿" :image-size="72" />
         <template v-if="contextText">
           <h3 class="talk-script__title">注入上下文</h3>
@@ -142,13 +142,15 @@ onMounted(() => {
 <style scoped>
 .talk-script__grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   gap: var(--cp-gap-4);
   align-items: start;
 }
 
 .talk-script__panel {
   border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-card);
+  box-shadow: var(--cp-shadow-1);
 }
 
 .talk-script__title {
@@ -166,7 +168,7 @@ onMounted(() => {
 .talk-script__draft {
   line-height: 1.7;
   padding: var(--cp-gap-3);
-  background: var(--cp-primary-bg);
+  background: var(--cp-surface-subtle);
   border-radius: var(--cp-radius-ctl);
   margin-bottom: var(--cp-gap-4);
 }

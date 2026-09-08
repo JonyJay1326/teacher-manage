@@ -175,12 +175,12 @@ function handleClose(): void {
 <style scoped>
 .quick-note__kbd {
   margin-left: var(--cp-gap-2);
-  padding: 1px 6px;
-  font-size: 11px;
+  padding: var(--cp-gap-hairline) var(--cp-gap-compact);
+  font-size: var(--cp-font-xs);
   font-family: inherit;
   color: var(--cp-text-3);
   background: var(--cp-bg-page);
   border: 1px solid var(--cp-border);
-  border-radius: 4px;
+  border-radius: var(--cp-radius-sm);
 }
 </style>

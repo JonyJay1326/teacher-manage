@@ -88,7 +88,7 @@ function rowOption(row: SubjectScatterRow, colorIndex: number): EChartsOption {
           opacity: CHART_STYLE.bubbleOpacity,
           shadowBlur: 10,
           shadowColor: CHART_STYLE.shadowColor,
-          borderColor: 'rgba(255,255,255,0.92)',
+          borderColor: CHART_STYLE.seriesBorder,
           borderWidth: CHART_STYLE.bubbleBorderWidth,
         },
         emphasis: {
@@ -155,7 +155,7 @@ function formatAvg(avg: number | null): string {
 .score-scatter__list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--cp-gap-compact);
 }
 
 .score-scatter__row {
@@ -169,8 +169,8 @@ function formatAvg(avg: number | null): string {
 .score-scatter__meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-left: 2px;
+  gap: var(--cp-gap-half);
+  padding-left: var(--cp-gap-half);
 }
 
 .score-scatter__name {
@@ -186,20 +186,20 @@ function formatAvg(avg: number | null): string {
 }
 
 .score-scatter__avg-num {
-  color: var(--cp-danger);
+  color: var(--cp-domain-score-text);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
 .score-scatter__sample {
-  font-size: 11px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
 }
 
 .score-scatter__chart {
   min-width: 0;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: var(--cp-radius-ctl);
+  background: var(--cp-bg-card);
   border: 1px solid var(--cp-divider);
 }
 
@@ -207,7 +207,7 @@ function formatAvg(avg: number | null): string {
   height: 64px;
   display: flex;
   align-items: center;
-  padding-left: 16px;
+  padding-left: var(--cp-gap-4);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-3);
 }

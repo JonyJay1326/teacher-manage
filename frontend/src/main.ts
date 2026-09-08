@@ -29,6 +29,10 @@ app.use(ElementPlus, { locale: zhCn });
 
 setUnauthorizedHandler(() => {
   const authStore = useAuthStore(pinia);
+  // 演示模式永不踢到登录（也不应打到真实 API）
+  if (router.currentRoute.value.path.startsWith('/demo')) {
+    return;
+  }
   authStore.clearSession();
   if (router.currentRoute.value.path !== '/login') {
     void router.replace({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });

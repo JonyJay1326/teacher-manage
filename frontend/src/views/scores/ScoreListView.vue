@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ApiError } from '@/api/http';
@@ -109,6 +109,17 @@ function goEntry(examId: number): void {
   router.push(`/scores/exams/${examId}/enter`);
 }
 
+/** 已发布考试数（统计条） */
+const publishedCount = computed(
+  () => exams.value.filter((exam) => exam.status === '已发布').length,
+);
+
+/** 最近一次考试（按考试日期倒序第一条） */
+const latestExam = computed<Exam | null>(() => {
+  if (exams.value.length === 0) return null;
+  return [...exams.value].sort((a, b) => b.examDate.localeCompare(a.examDate))[0] ?? null;
+});
+
 /** 状态标签类型 */
 function statusType(status: string): 'info' | 'warning' | 'success' | undefined {
   const map: Record<string, 'info' | 'warning' | 'success' | undefined> = {
@@ -118,6 +129,18 @@ function statusType(status: string): 'info' | 'warning' | 'success' | undefined 
     已归档: undefined,
   };
   return map[status];
+}
+
+/** 考试日期展示到日（YYYY-MM-DD） */
+function formatExamDate(iso: string): string {
+  if (!iso) return '—';
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 onMounted(() => {
@@ -135,13 +158,32 @@ onMounted(() => {
       <el-button type="primary" @click="openCreateDialog">新建考试</el-button>
     </div>
 
+    <!-- 统计条：填补表格上方的空白，数据全部由现有列表前端计算 -->
+    <div class="score-list__stats">
+      <span class="score-list__stat">
+        共 <b class="score-list__stat-num">{{ exams.length }}</b> 场考试
+      </span>
+      <span class="score-list__stat-sep" />
+      <span class="score-list__stat">
+        已发布 <b class="score-list__stat-num">{{ publishedCount }}</b>
+      </span>
+      <span class="score-list__stat-sep" />
+      <span v-if="latestExam" class="score-list__stat">
+        最近一次：{{ latestExam.name }}（<span class="cp-tabular-nums">{{ formatExamDate(latestExam.examDate) }}</span>）
+      </span>
+      <span v-else class="score-list__stat score-list__stat--muted">暂无考试</span>
+    </div>
+
     <el-card shadow="never" class="score-list__table-card" v-loading="loading">
-      <el-table :data="exams" :stripe="false">
+<el-table :data="exams" :stripe="false">
+        <template #empty>
+          <el-empty description="暂无匹配考试，可调整筛选条件或新建考试" :image-size="72"><el-button @click="openCreateDialog">新建考试</el-button></el-empty>
+        </template>
         <el-table-column prop="name" label="考试名称" min-width="180" />
         <el-table-column prop="examType" label="类型" width="100" align="center" />
         <el-table-column prop="examDate" label="考试日期" width="130" align="center">
           <template #default="{ row }">
-            <span class="cp-tabular-nums">{{ row.examDate }}</span>
+            <span class="cp-tabular-nums">{{ formatExamDate(row.examDate) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="110" align="center">
@@ -224,6 +266,43 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.score-list__stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cp-gap-3);
+  padding: var(--cp-gap-3) var(--cp-gap-4);
+  margin-bottom: var(--cp-gap-4);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-ctl);
+  background: var(--cp-bg-card);
+  box-shadow: var(--cp-shadow-1);
+  color: var(--cp-text-2);
+  font-size: var(--cp-font-sm);
+}
+
+.score-list__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-gap-1);
+}
+
+.score-list__stat-num {
+  color: var(--cp-domain-score-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.score-list__stat--muted {
+  color: var(--cp-text-3);
+}
+
+.score-list__stat-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--cp-divider);
+}
+
 .score-list__table-card {
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-card);

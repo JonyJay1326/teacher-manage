@@ -117,7 +117,10 @@ onMounted(() => {
         <el-button @click="load">刷新</el-button>
       </div>
 
-      <el-table :data="items" v-loading="loading" empty-text="暂无记录" style="width: 100%">
+<el-table :data="items" v-loading="loading" empty-text="暂无记录" style="width: 100%">
+        <template #empty>
+          <el-empty description="暂无匹配生成记录，可调整筛选条件" :image-size="72"></el-empty>
+        </template>
         <el-table-column prop="id" label="ID" width="72" />
         <el-table-column label="场景" min-width="120">
           <template #default="{ row }">{{ sceneLabel(row.scene) }}</template>
@@ -179,7 +182,7 @@ onMounted(() => {
         <p class="records__label">输出</p>
         <div
           v-if="detailOutputHtml"
-          class="records__output"
+          class="records__output cp-reading"
           v-html="detailOutputHtml"
         />
         <pre v-else class="records__pre">—</pre>
@@ -227,7 +230,7 @@ onMounted(() => {
 .records__output {
   margin: 0;
   padding: var(--cp-gap-3);
-  background: var(--cp-primary-bg);
+  background: var(--cp-surface-subtle);
   border-radius: var(--cp-radius-ctl);
   word-break: break-word;
   font-size: var(--cp-font-sm);
@@ -251,7 +254,7 @@ onMounted(() => {
 }
 
 .records__output :deep(li) {
-  margin: 2px 0;
+  margin: var(--cp-gap-half) 0;
 }
 
 .records__output :deep(strong) {

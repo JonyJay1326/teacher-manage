@@ -19,6 +19,10 @@ import {
   CHART_POSITIVE,
   CHART_STYLE,
   chartTooltip,
+  softGroupedBarItemStyle,
+  softHorizontalBarItemStyle,
+  softLinePointItemStyle,
+  softVerticalBarItemStyle,
 } from '@/constants/chart';
 
 /** 软几何调色板（附录 D.5） */
@@ -124,13 +128,7 @@ const trendOption = computed<EChartsOption>(() => {
       symbol: 'circle',
       symbolSize: 8,
       lineStyle: { width: 3, color: chartPalette[0] },
-      itemStyle: {
-        color: chartPalette[0],
-        borderColor: '#fff',
-        borderWidth: 2,
-        shadowBlur: 8,
-        shadowColor: CHART_STYLE.shadowColor,
-      },
+      itemStyle: softLinePointItemStyle(chartPalette[0]!),
     },
   ];
   if (hasGrade) {
@@ -142,7 +140,7 @@ const trendOption = computed<EChartsOption>(() => {
       symbol: 'diamond',
       symbolSize: 7,
       lineStyle: { width: 2, type: 'dashed', color: chartPalette[5] },
-      itemStyle: { color: chartPalette[5] },
+      itemStyle: softLinePointItemStyle(chartPalette[5]!),
     });
   }
   return {
@@ -172,13 +170,33 @@ const trendOption = computed<EChartsOption>(() => {
   };
 });
 
-/** 各科低分/及格/优秀率堆叠 */
+/** 各科低分/及格/优秀率分组柱 */
 const ratesOption = computed<EChartsOption>(() => {
   const items = overview.value?.subjectRates.items ?? [];
   return {
     color: [CHART_NEGATIVE, CHART_POSITIVE, chartPalette[0]],
     animationDuration: CHART_STYLE.animationDuration,
-    tooltip: chartTooltip({ trigger: 'axis', axisPointer: { type: 'shadow' } }),
+    tooltip: chartTooltip({
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      /** 比率统一展示为百分比，保留两位小数 */
+      formatter: (params: unknown) => {
+        const list = Array.isArray(params) ? params : [params];
+        const head = list[0] as { axisValueLabel?: string; name?: string };
+        const title = head?.axisValueLabel ?? head?.name ?? '';
+        const lines = list.map((raw) => {
+          const p = raw as {
+            marker?: string;
+            seriesName?: string;
+            value?: number | string;
+          };
+          const num = Number(p.value);
+          const text = Number.isFinite(num) ? `${num.toFixed(2)}%` : '—';
+          return `${p.marker ?? ''}${p.seriesName ?? ''}：${text}`;
+        });
+        return `${title}<br/>${lines.join('<br/>')}`;
+      },
+    }),
     legend: {
       bottom: 0,
       textStyle: { color: CHART_STYLE.muted, fontSize: 12 },
@@ -207,21 +225,21 @@ const ratesOption = computed<EChartsOption>(() => {
         barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
         barGap: CHART_STYLE.barGap,
         barCategoryGap: CHART_STYLE.barCategoryGap,
-        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
+        itemStyle: softGroupedBarItemStyle(),
       },
       {
         name: '及格率',
         type: 'bar',
         data: items.map((i) => i.passRate),
         barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
-        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
+        itemStyle: softGroupedBarItemStyle(),
       },
       {
         name: '优秀率',
         type: 'bar',
         data: items.map((i) => i.excellentRate),
         barMaxWidth: CHART_STYLE.groupedBarMaxWidth,
-        itemStyle: { borderRadius: CHART_STYLE.capsuleRadius },
+        itemStyle: softGroupedBarItemStyle(),
       },
     ],
   };
@@ -274,21 +292,30 @@ const moversOption = computed((): EChartsOption => {
     series: [
       {
         type: 'bar',
-        data: deltas.map((d) => ({
-          value: d,
-          itemStyle: {
-            color: d > 0 ? CHART_POSITIVE : CHART_NEGATIVE,
-            borderRadius: CHART_STYLE.hBarRadius,
-            shadowBlur: 8,
-            shadowColor: CHART_STYLE.shadowColor,
-          },
-        })),
+        data: deltas.map((d) => {
+          const toward = d >= 0 ? 'right' : 'left';
+          const endColor = d >= 0 ? CHART_POSITIVE : CHART_NEGATIVE;
+          const startColor =
+            d >= 0
+              ? CHART_STYLE.positiveGradientStart
+              : CHART_STYLE.negativeGradientStart;
+          return {
+            value: d,
+            itemStyle: softHorizontalBarItemStyle(endColor, {
+              toward,
+              startColor,
+            }),
+          };
+        }),
         barWidth: CHART_STYLE.hBarWidth,
         barMaxWidth: CHART_STYLE.hBarMaxWidth,
         barCategoryGap: CHART_STYLE.barCategoryGap,
         label: {
           show: true,
-          position: 'right',
+          position: (params: unknown) => {
+            const p = params as { value?: number };
+            return Number(p.value ?? 0) >= 0 ? 'right' : 'left';
+          },
           color: CHART_STYLE.muted,
           formatter: (p: { value?: unknown }) => {
             const v = Number(p.value ?? 0);
@@ -348,6 +375,10 @@ const focusFreqOption = computed<EChartsOption>(() => {
         barWidth: CHART_STYLE.hBarWidth,
         barMaxWidth: CHART_STYLE.hBarMaxWidth,
         barCategoryGap: CHART_STYLE.barCategoryGap,
+        itemStyle: softHorizontalBarItemStyle(chartPalette[2]!, {
+          roundFarEnd: false,
+          startColor: CHART_STYLE.praiseGradientStart,
+        }),
       },
       {
         name: '家校沟通',
@@ -356,9 +387,9 @@ const focusFreqOption = computed<EChartsOption>(() => {
         data: contacts,
         barWidth: CHART_STYLE.hBarWidth,
         barMaxWidth: CHART_STYLE.hBarMaxWidth,
-        itemStyle: {
-          borderRadius: CHART_STYLE.hBarRadius,
-        },
+        itemStyle: softHorizontalBarItemStyle(chartPalette[1]!, {
+          startColor: CHART_STYLE.positiveGradientStart,
+        }),
       },
     ],
   };
@@ -406,7 +437,7 @@ const contactHeatOption = computed<EChartsOption>(() => {
       range: [heat.rangeStart, heat.rangeEnd],
       itemStyle: {
         borderWidth: 2,
-        borderColor: '#FFFFFF',
+        borderColor: CHART_STYLE.seriesBorder,
         borderRadius: 4,
       },
       yearLabel: { show: false },
@@ -432,7 +463,18 @@ const categoryPieOption = computed<EChartsOption>(() => {
     animationDuration: CHART_STYLE.animationDuration,
     tooltip: chartTooltip({
       trigger: 'item',
-      formatter: '{b}: {c}（{d}%）',
+      /** 占比统一两位小数百分比 */
+      formatter: (params: unknown) => {
+        const p = params as {
+          name?: string;
+          value?: number;
+          percent?: number;
+          marker?: string;
+        };
+        const pct =
+          typeof p.percent === 'number' ? p.percent.toFixed(2) : '—';
+        return `${p.marker ?? ''}${p.name ?? ''}：${p.value ?? 0}（${pct}%）`;
+      },
     }),
     legend: {
       bottom: 0,
@@ -448,7 +490,7 @@ const categoryPieOption = computed<EChartsOption>(() => {
         data: items.map((i) => ({ name: i.category, value: i.count })),
         itemStyle: {
           borderRadius: CHART_STYLE.pieBorderRadius,
-          borderColor: '#fff',
+          borderColor: CHART_STYLE.seriesBorder,
           borderWidth: CHART_STYLE.pieBorderWidth,
           shadowBlur: 8,
           shadowColor: CHART_STYLE.shadowColor,
@@ -456,7 +498,25 @@ const categoryPieOption = computed<EChartsOption>(() => {
         label: {
           color: CHART_STYLE.text,
           fontSize: 11,
-          formatter: '{b}\n{d}%',
+          formatter: (params: unknown) => {
+            const p = params as { name?: string; percent?: number };
+            const pct =
+              typeof p.percent === 'number' ? p.percent.toFixed(2) : '—';
+            return `${p.name ?? ''}\n${pct}%`;
+          },
+        },
+        labelLine: {
+          length: 11,
+          length2: 9,
+          lineStyle: { color: CHART_STYLE.muted, width: 1 },
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 5,
+          itemStyle: {
+            shadowBlur: CHART_STYLE.shadowBlur,
+            shadowColor: CHART_STYLE.shadowColor,
+          },
         },
       },
     ],
@@ -498,23 +558,7 @@ const histogramOption = computed<EChartsOption>(() => {
           color: CHART_STYLE.barTrack,
           borderRadius: CHART_STYLE.capsuleRadius,
         },
-        itemStyle: {
-          borderRadius: CHART_STYLE.capsuleRadius,
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: CHART_STYLE.barGradientTop },
-              { offset: 1, color: chartPalette[0] },
-            ],
-          },
-          shadowBlur: CHART_STYLE.shadowBlur,
-          shadowColor: CHART_STYLE.shadowColor,
-          shadowOffsetY: 3,
-        },
+        itemStyle: softVerticalBarItemStyle(chartPalette[0]!),
       },
     ],
   };
@@ -550,14 +594,12 @@ const monthlyOption = computed<EChartsOption>(() => {
         smooth: true,
         symbol: 'circle',
         symbolSize: 7,
-        lineStyle: { width: 3 },
-        itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 2,
-          shadowBlur: 8,
-          shadowColor: CHART_STYLE.shadowColor,
+        lineStyle: { width: 3, color: chartPalette[3] },
+        itemStyle: softLinePointItemStyle(chartPalette[3]!),
+        areaStyle: {
+          color: chartPalette[3],
+          opacity: 0.12,
         },
-        areaStyle: { opacity: 0.12 },
       },
     ],
   };
@@ -867,6 +909,7 @@ onMounted(() => {
 }
 
 .analysis__section-head {
+  flex-wrap: wrap;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -888,13 +931,13 @@ onMounted(() => {
 
 .analysis__movers {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: var(--cp-gap-5);
 }
 
 .analysis__mover-lists {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--cp-gap-4);
 }
 
@@ -919,6 +962,8 @@ onMounted(() => {
 }
 
 .analysis__list li {
+  gap: var(--cp-gap-3);
+  overflow-wrap: anywhere;
   display: flex;
   justify-content: space-between;
   padding: var(--cp-gap-2) 0;

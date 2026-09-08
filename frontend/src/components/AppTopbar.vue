@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import { Fold, Expand, EditPen, Setting } from '@element-plus/icons-vue';
 import { ApiError } from '@/api/http';
+import { isDemoPath } from '@/demo/path';
 
 defineProps<{
   collapsed: boolean;
@@ -19,7 +20,9 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
+const inDemo = computed(() => isDemoPath(route.path));
 
 const pwdVisible = ref(false);
 const oldPassword = ref('');
@@ -60,10 +63,11 @@ function openSettings(): void {
   void router.push('/settings');
 }
 
-/** 退出登录 */
+/** 退出登录 / 退出演示 */
 async function handleLogout(): Promise<void> {
+  const leavingDemo = inDemo.value;
   await authStore.logout();
-  ElMessage.success('已退出登录');
+  ElMessage.success(leavingDemo ? '已退出演示' : '已退出登录');
   await router.replace('/login');
 }
 </script>
@@ -73,10 +77,14 @@ async function handleLogout(): Promise<void> {
     <div class="topbar__left">
       <el-button
         :icon="collapsed ? Expand : Fold"
+        :aria-label="collapsed ? '展开导航' : '折叠导航'"
         text
         @click="emit('toggleSidebar')"
       />
       <span class="topbar__title">{{ pageTitle }}</span>
+      <el-tag v-if="inDemo" type="warning" effect="plain" size="small" round>
+        演示数据 · AI 调 DeepSeek · 业务不入库
+      </el-tag>
     </div>
     <div class="topbar__right">
       <el-tooltip content="速记 Alt+Q" placement="bottom">
@@ -97,8 +105,10 @@ async function handleLogout(): Promise<void> {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="pwd">修改密码</el-dropdown-item>
-            <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            <el-dropdown-item v-if="!inDemo" command="pwd">修改密码</el-dropdown-item>
+            <el-dropdown-item :divided="!inDemo" command="logout">
+              {{ inDemo ? '退出演示' : '退出登录' }}
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -135,15 +145,16 @@ async function handleLogout(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  height: var(--cp-topbar-height);
   padding: 0 var(--cp-gap-5);
   background: var(--cp-bg-card);
   border-bottom: 1px solid var(--cp-border);
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.04);
+  box-shadow: none;
   flex-shrink: 0;
 }
 
 .topbar__left {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-2);
@@ -156,6 +167,7 @@ async function handleLogout(): Promise<void> {
 }
 
 .topbar__right {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-4);
@@ -163,13 +175,13 @@ async function handleLogout(): Promise<void> {
 
 .topbar__kbd {
   margin-left: var(--cp-gap-2);
-  padding: 1px 6px;
-  font-size: 11px;
+  padding: var(--cp-gap-hairline) var(--cp-gap-compact);
+  font-size: var(--cp-font-xs);
   font-family: inherit;
   color: var(--cp-text-3);
   background: var(--cp-bg-page);
   border: 1px solid var(--cp-border);
-  border-radius: 4px;
+  border-radius: var(--cp-radius-sm);
 }
 
 .topbar__settings {
@@ -190,6 +202,10 @@ async function handleLogout(): Promise<void> {
 }
 
 .topbar__username {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--cp-font-base);
   font-weight: 500;
   color: var(--cp-text-1);

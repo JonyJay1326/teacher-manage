@@ -285,7 +285,10 @@ onMounted(() => {
         <el-button @click="load">刷新</el-button>
       </div>
 
-      <el-table :data="items" v-loading="loading" empty-text="暂无文档，先上传或粘贴">
+<el-table :data="items" v-loading="loading" empty-text="暂无文档，先上传或粘贴">
+        <template #empty>
+          <el-empty description="暂无匹配文档，可调整筛选条件或上传文档" :image-size="72"><el-button @click="openUpload">上传文档</el-button></el-empty>
+        </template>
         <el-table-column prop="title" label="标题" min-width="200" />
         <el-table-column label="分类" width="120">
           <template #default="{ row }">{{ row.categoryPath || '—' }}</template>
@@ -452,10 +455,12 @@ onMounted(() => {
 
 <style scoped>
 .kb-list__actions {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--cp-gap-2);
 }
 .kb-list__filters {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--cp-gap-3);
   margin-bottom: var(--cp-gap-4);
@@ -468,14 +473,14 @@ onMounted(() => {
 }
 .kb-muted {
   color: var(--cp-text-3);
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
 }
 .kb-seg {
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
   line-height: 1.6;
   color: var(--cp-text-2);
 }

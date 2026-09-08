@@ -74,6 +74,10 @@ async function handleLogin(): Promise<void> {
         </el-form-item>
       </el-form>
       <p class="login-card__hint">请使用 cli:create-user 创建的账号登录</p>
+      <p class="login-card__demo">
+        <router-link to="/demo">进入演示模式</router-link>
+        <span>（业务 Mock；AI 调 DeepSeek 需先登录）</span>
+      </p>
     </div>
   </div>
 </template>
@@ -88,7 +92,7 @@ async function handleLogin(): Promise<void> {
 }
 
 .login-card {
-  width: 400px;
+  width: 440px;
   padding: var(--cp-gap-6);
   box-shadow: var(--cp-shadow-2);
 }
@@ -106,21 +110,42 @@ async function handleLogin(): Promise<void> {
 
 .login-card__title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--cp-font-lg);
   font-weight: 700;
   color: var(--cp-text-1);
 }
 
 .login-card__desc {
   margin: var(--cp-gap-1) 0 0;
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-2);
 }
 
 .login-card__hint {
   margin: var(--cp-gap-4) 0 0;
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
   text-align: center;
+}
+
+.login-card__demo {
+  margin: var(--cp-gap-2) 0 0;
+  font-size: var(--cp-font-xs);
+  color: var(--cp-text-3);
+  text-align: center;
+}
+
+.login-card__demo a {
+  color: var(--cp-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-card__demo a:hover {
+  text-decoration: underline;
+}
+
+.login-card__demo span {
+  margin-left: var(--cp-gap-1);
 }
 </style>

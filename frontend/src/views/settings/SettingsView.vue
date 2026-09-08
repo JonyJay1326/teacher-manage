@@ -583,6 +583,7 @@ onMounted(() => {
 }
 
 .settings__row {
+  flex-wrap: wrap;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -591,6 +592,7 @@ onMounted(() => {
 }
 
 .settings__row-actions {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--cp-gap-2);
   flex-shrink: 0;

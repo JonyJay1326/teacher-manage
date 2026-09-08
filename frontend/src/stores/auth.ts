@@ -7,6 +7,13 @@ import {
   meApi,
   type AuthUser,
 } from '@/api/auth';
+import { deactivateDemoMode, isDemoMode } from '@/demo/mode';
+
+const DEMO_USER: AuthUser = {
+  id: 9001,
+  username: 'demo',
+  displayName: '演示班主任',
+};
 
 /** 认证状态 */
 export const useAuthStore = defineStore('auth', () => {
@@ -18,6 +25,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 拉取当前会话 */
   async function fetchMe(): Promise<boolean> {
+    if (isDemoMode()) {
+      user.value = { ...DEMO_USER };
+      bootstrapped.value = true;
+      return true;
+    }
     try {
       user.value = await meApi();
       return true;
@@ -37,6 +49,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 登出 */
   async function logout(): Promise<void> {
+    if (isDemoMode()) {
+      deactivateDemoMode();
+      user.value = null;
+      return;
+    }
     try {
       await logoutApi();
     } catch {
@@ -55,6 +72,20 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
   }
 
+  /** 进入演示：注入假用户（不请求后端） */
+  function enterDemoSession(): void {
+    user.value = { ...DEMO_USER };
+    bootstrapped.value = true;
+  }
+
+  /** 离开演示：清演示用户（真实会话由后续 fetchMe 恢复） */
+  function exitDemoSession(): void {
+    if (user.value?.username === 'demo') {
+      user.value = null;
+      bootstrapped.value = false;
+    }
+  }
+
   return {
     user,
     bootstrapped,
@@ -65,5 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     changePassword,
     clearSession,
+    enterDemoSession,
+    exitDemoSession,
   };
 });

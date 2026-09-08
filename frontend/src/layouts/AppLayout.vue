@@ -8,6 +8,7 @@ import AppTopbar from '@/components/AppTopbar.vue';
 import QuickNoteDialog from '@/components/QuickNoteDialog.vue';
 import { draftCountApi } from '@/api/incidents';
 import { ApiError } from '@/api/http';
+import { stripDemoPrefix } from '@/demo/path';
 
 const uiStore = useUiStore();
 const incidentsStore = useIncidentsStore();
@@ -19,9 +20,11 @@ const draftCount = ref(0);
 
 /** 当前页面标题 */
 const pageTitle = computed(() => {
-  if (route.path.match(/^\/students\/\d+/)) return '学生详情';
-  if (route.path.match(/^\/scores\/exams\/\d+\/enter/)) return '成绩录入';
-  if (route.path.match(/^\/scores\/exams\/\d+$/)) return '考试详情';
+  const path = stripDemoPrefix(route.path);
+  if (path.match(/^\/students\/\d+/)) return '学生详情';
+  if (path.match(/^\/incidents\/\d+/)) return '事件详情';
+  if (path.match(/^\/scores\/exams\/\d+\/enter/)) return '成绩录入';
+  if (path.match(/^\/scores\/exams\/\d+$/)) return '考试详情';
   const titleMap: Record<string, string> = {
     '/': '首页看板',
     '/students': '花名册',
@@ -33,10 +36,13 @@ const pageTitle = computed(() => {
     '/ai/ask': '学情问答',
     '/ai/prompts': '模板管理',
     '/ai/records': '生成历史',
+    '/ai/talk': '沟通话术',
+    '/ai/summary': '学期工作总结',
+    '/recycle': '回收站',
     '/analysis': '分析中心',
     '/settings': '系统设置',
   };
-  return titleMap[route.path] ?? 'ClassPilot';
+  return titleMap[path] ?? 'ClassPilot';
 });
 
 /** 打开速记弹窗 */
@@ -140,7 +146,7 @@ onUnmounted(() => {
   min-height: 0;
   padding: var(--cp-gap-5);
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   background: var(--cp-page-atmosphere);
 }
 </style>

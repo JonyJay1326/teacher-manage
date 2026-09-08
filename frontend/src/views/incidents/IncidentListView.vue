@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Delete, View } from '@element-plus/icons-vue';
 import { ApiError } from '@/api/http';
 import {
   listIncidentsApi,
@@ -108,12 +109,6 @@ function formatDateTime(iso: string): string {
   });
 }
 
-/** 严重度星标 */
-function severityStars(severity: number): string {
-  const safe = Math.min(3, Math.max(1, severity));
-  return '★'.repeat(safe) + '☆'.repeat(3 - safe);
-}
-
 /** 跟进状态文字 */
 function followUpText(incident: IncidentListItem): string {
   if (!incident.followUpNeeded) return '无需跟进';
@@ -126,6 +121,11 @@ function displayTitle(incident: IncidentListItem): string {
   if (incident.title) return incident.title;
   if (incident.content) return incident.content.slice(0, 20);
   return '未命名事件';
+}
+
+/** 学生标签使用稳定的低饱和轮换色，避免同一张卡片颜色过于单一。 */
+function getStudentChipClass(index: number): string {
+  return `incident-card__student--${(index % 4) + 1}`;
 }
 
 /** 加载事件列表 */
@@ -374,40 +374,67 @@ onMounted(() => {
         class="incident-card cp-card cp-card--hoverable"
         :class="`incident-card--${getCategoryDomainClass(incident.category)}`"
         @click="onCardClick(incident)"
+        tabindex="0"
+        @keydown.enter.self="onCardClick(incident)"
       >
-        <div class="incident-card__head">
-          <h3 class="incident-card__title">{{ displayTitle(incident) }}</h3>
-          <el-tag v-if="incident.status === 'draft'" type="warning" size="small">草稿</el-tag>
+        <!-- 左侧域色条：一眼看出事件性质 -->
+        <span class="incident-card__bar" aria-hidden="true" />
+
+        <div class="incident-card__main">
+          <div class="incident-card__header">
+            <div class="incident-card__heading">
+              <h3 class="incident-card__title" :title="displayTitle(incident)">{{ displayTitle(incident) }}</h3>
+            </div>
+            <div class="incident-card__header-meta">
+              <span class="incident-card__time cp-tabular-nums">
+                {{ formatDateTime(incident.occurredAt) }}
+              </span>
+              <span
+                class="incident-card__category"
+                :class="`incident-card__category--${getCategoryDomainClass(incident.category)}`"
+              >
+                <i aria-hidden="true" />
+                {{ incident.category }}
+              </span>
+            </div>
+          </div>
+          <div class="incident-card__students">
+            <span
+              v-for="(name, index) in incident.studentNames"
+              :key="name"
+              class="incident-card__student"
+              :class="getStudentChipClass(index)"
+            >
+              <span class="incident-card__student-avatar">{{ name.slice(0, 1) }}</span>
+              <span>{{ name }}</span>
+            </span>
+          </div>
+          <div class="incident-card__line1">
+            <el-tag v-if="incident.status === 'draft'" type="warning" size="small" effect="plain">
+              草稿
+            </el-tag>
+            <span v-if="incident.followUpNeeded && !incident.followUpDone" class="incident-card__badge">
+              {{ followUpText(incident) }}
+            </span>
+          </div>
+          <p class="incident-card__summary">
+            {{ incident.content || '无内容' }}
+          </p>
         </div>
-        <div class="incident-card__students">
-          <el-tag
-            v-for="name in incident.studentNames"
-            :key="name"
-            size="small"
-            type="info"
-          >
-            {{ name }}
-          </el-tag>
-        </div>
-        <p v-if="incident.content" class="incident-card__content">
-          {{ incident.content }}
-        </p>
-        <div class="incident-card__meta">
-          <span>{{ formatDateTime(incident.occurredAt) }}</span>
-          <span>·</span>
-          <span>{{ incident.category }}</span>
-          <span>·</span>
-          <span class="incident-card__severity">{{ severityStars(incident.severity) }}</span>
-          <span>·</span>
-          <span
-            :class="{
-              'incident-card__follow--pending': incident.followUpNeeded && !incident.followUpDone,
-            }"
-          >
-            {{ followUpText(incident) }}
-          </span>
-        </div>
+
         <div class="incident-card__actions" @click.stop>
+          <div class="incident-card__progress">
+            <span>{{ followUpText(incident) }}</span>
+            <span class="cp-sev-dots" :title="`严重度 ${incident.severity}/3`">
+              <i
+                v-for="n in 3"
+                :key="n"
+                class="cp-sev-dots__dot"
+                :class="n <= incident.severity ? `cp-sev-dots__dot--on-${incident.severity}` : ''"
+              />
+            </span>
+          </div>
+          <div class="incident-card__action-buttons">
           <el-button
             v-if="incident.status === 'draft'"
             type="primary"
@@ -415,20 +442,47 @@ onMounted(() => {
             size="small"
             @click="onConfirmClick(incident, $event)"
           >
-            确认入库
+            确认
           </el-button>
-          <el-button type="primary" link size="small" @click.stop="router.push(`/incidents/${incident.id}`)">
-            详情
+          <el-button
+            class="incident-card__detail-button"
+            type="primary"
+            link
+            size="small"
+            @click.stop="router.push(`/incidents/${incident.id}`)"
+          >
+            <el-icon><View /></el-icon>
+            <span>详情</span>
           </el-button>
-          <el-button type="danger" link size="small" @click.stop="handleDelete(incident)">
-            删除
+          <el-button
+            class="incident-card__delete-button"
+            type="danger"
+            link
+            size="small"
+            @click.stop="handleDelete(incident)"
+          >
+            <el-icon><Delete /></el-icon>
+            <span>删除</span>
           </el-button>
+          </div>
         </div>
       </div>
     </div>
 
     <div v-if="!loading && filteredIncidents.length === 0" class="incident-list__empty cp-card">
-      <p>暂无事件记录</p>
+      <svg class="incident-list__empty-art" viewBox="0 0 132 88" aria-hidden="true">
+        <rect x="18" y="12" width="96" height="64" rx="10" fill="var(--cp-bg-page)" stroke="var(--cp-border)" stroke-width="1" />
+        <rect x="32" y="28" width="52" height="6" rx="3" fill="var(--cp-primary-bg-strong)" />
+        <rect x="32" y="42" width="68" height="6" rx="3" fill="var(--cp-divider)" />
+        <rect x="32" y="56" width="40" height="6" rx="3" fill="var(--cp-divider)" />
+        <circle cx="98" cy="60" r="12" fill="var(--cp-bg-card)" stroke="var(--cp-primary-border)" stroke-width="1" />
+        <path d="M98 55v10M93 60h10" stroke="var(--cp-primary)" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+      <p class="incident-list__empty-title">还没有事件记录</p>
+      <p class="incident-list__empty-desc">
+        课上随手速记一笔（Alt+Q），之后补充信息并手工确认
+      </p>
+      <el-button type="primary" @click="openCreateDialog">新建事件</el-button>
     </div>
 
     <!-- 草稿确认对话框 -->
@@ -600,94 +654,279 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+/* 桌面两列，宽屏三列；类别色条与跟进状态分别表达。 */
 .incident-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--cp-gap-4);
-}
-
-@media (min-width: 1600px) {
-  .incident-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cp-gap-3);
 }
 
 .incident-card {
-  padding: var(--cp-gap-4);
-  border-left: 5px solid var(--cp-border);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 196px;
+  padding: var(--cp-gap-4) var(--cp-gap-5) var(--cp-gap-3) var(--cp-gap-5);
   cursor: pointer;
+  overflow: hidden;
 }
 
-.incident-card--incident { border-left-color: var(--cp-domain-incident); }
-.incident-card--contact { border-left-color: var(--cp-domain-contact); }
-.incident-card--praise { border-left-color: var(--cp-domain-praise); }
-.incident-card--score { border-left-color: var(--cp-domain-score); }
-.incident-card--default { border-left-color: var(--cp-text-3); }
+/* 左侧域色条（内缩，与卡片圆角不打架） */
+.incident-card__bar {
+  position: absolute;
+  left: 0;
+  top: var(--cp-gap-4);
+  bottom: var(--cp-gap-4);
+  width: 4px;
+  border-radius: var(--cp-radius-edge);
+  background: var(--cp-text-3);
+}
 
-.incident-card__head {
+.incident-card--incident .incident-card__bar { background: var(--cp-domain-incident); }
+.incident-card--contact .incident-card__bar { background: var(--cp-domain-contact); }
+.incident-card--praise  .incident-card__bar { background: var(--cp-domain-praise); }
+.incident-card--score   .incident-card__bar { background: var(--cp-domain-score); }
+.incident-card--default .incident-card__bar { background: var(--cp-text-3); }
+
+.incident-card__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-gap-4);
+}
+
+.incident-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--cp-gap-2);
-  margin-bottom: var(--cp-gap-2);
+  gap: var(--cp-gap-4);
+  min-width: 0;
+}
+
+.incident-card__heading,
+.incident-card__header-meta,
+.incident-card__students,
+.incident-card__progress,
+.incident-card__action-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.incident-card__heading {
+  min-width: 0;
+  gap: var(--cp-gap-3);
 }
 
 .incident-card__title {
+  margin: 0;
+  min-width: 0;
+  max-width: 28ch;
+  font-family: inherit;
+  font-size: var(--cp-font-lg);
+  font-weight: 700;
+  color: var(--cp-text-1);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.incident-card__header-meta {
+  justify-content: flex-end;
+  gap: var(--cp-gap-4);
+  flex-shrink: 0;
+}
+
+.incident-card__category {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-gap-2);
+  min-height: 30px;
+  padding: 0 var(--cp-gap-3);
+  border-radius: var(--cp-radius-ctl);
+  font-size: var(--cp-font-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.incident-card__category i {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--cp-radius-round);
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.incident-card__category--incident { color: var(--cp-domain-incident-text); background: var(--cp-domain-incident-bg); }
+.incident-card__category--contact { color: var(--cp-domain-contact-text); background: var(--cp-domain-contact-bg); }
+.incident-card__category--praise { color: var(--cp-domain-praise-text); background: var(--cp-domain-praise-bg); }
+.incident-card__category--score { color: var(--cp-domain-score-text); background: var(--cp-domain-score-bg); }
+.incident-card__category--default { color: var(--cp-text-2); background: var(--cp-surface-subtle); }
+
+.incident-card__students {
+  flex-wrap: wrap;
+  gap: var(--cp-gap-2);
+}
+
+.incident-card__student {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-gap-2);
+  min-height: 32px;
+  padding: 0 var(--cp-gap-3) 0 var(--cp-gap-1);
+  /* 控件圆角，避免胶囊形过大圆弧 */
+  border-radius: var(--cp-radius-ctl);
+  background: var(--cp-surface-subtle);
+  color: var(--cp-text-1);
+  font-size: var(--cp-font-sm);
+  font-weight: 500;
+}
+
+.incident-card__student-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--cp-radius-round);
+  color: var(--cp-text-on-brand);
+  font-size: var(--cp-font-xs);
+  font-weight: 700;
+}
+
+.incident-card__student--1 .incident-card__student-avatar { background: var(--cp-domain-contact); }
+.incident-card__student--2 .incident-card__student-avatar { background: var(--cp-domain-praise); }
+.incident-card__student--3 .incident-card__student-avatar { background: var(--cp-domain-score); }
+.incident-card__student--4 .incident-card__student-avatar { background: var(--cp-domain-incident); }
+
+.incident-card__line1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cp-gap-2);
+  min-width: 0;
+}
+
+.incident-card__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--cp-gap-2);
+  border-radius: var(--cp-radius-tag);
+  font-size: var(--cp-font-xs);
+  font-weight: 600;
+  color: var(--cp-danger);
+  background: var(--cp-danger-subtle);
+}
+
+.incident-card__summary {
+  margin: 0;
+  max-width: 78ch;
+  padding-left: var(--cp-gap-3);
+  border-left: 3px solid var(--cp-divider);
+  font-size: var(--cp-font-base);
+  color: var(--cp-text-1);
+  line-height: 1.65;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.incident-card__time {
+  font-size: var(--cp-font-sm);
+  font-weight: 500;
+  color: var(--cp-text-2);
+  white-space: nowrap;
+}
+
+/* 常驻操作，键盘和鼠标均可发现。 */
+.incident-card__actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-gap-4);
+  border-top: 1px solid var(--cp-divider);
+  padding-top: var(--cp-gap-3);
+}
+
+.incident-card__progress {
+  gap: var(--cp-gap-2);
+  color: var(--cp-text-3);
+  font-size: var(--cp-font-sm);
+  white-space: nowrap;
+}
+
+.incident-card__action-buttons {
+  justify-content: flex-end;
+  gap: var(--cp-gap-2);
+}
+
+.incident-card__action-buttons .el-button {
+  min-width: 52px;
+  min-height: 36px;
+  border-radius: var(--cp-radius-ctl);
+}
+
+.incident-card__detail-button {
+  padding: 0 var(--cp-gap-4) !important;
+  color: var(--cp-primary) !important;
+  background: var(--cp-primary-bg) !important;
+}
+
+.incident-card__delete-button {
+  color: var(--cp-danger) !important;
+}
+
+@media (max-width: 1360px) {
+  .incident-card {
+    padding-left: var(--cp-gap-5);
+  }
+
+  .incident-card__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--cp-gap-3);
+  }
+
+  .incident-card__header-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* 空态：线稿 + 一句话引导 + 主操作，替代纯文字占位 */
+.incident-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cp-gap-2);
+  padding: var(--cp-gap-6) var(--cp-gap-5);
+  text-align: center;
+}
+
+.incident-list__empty-art {
+  width: 132px;
+  height: 88px;
+  margin-bottom: var(--cp-gap-1);
+}
+
+.incident-list__empty-title {
   margin: 0;
   font-size: var(--cp-font-base);
   font-weight: 600;
   color: var(--cp-text-1);
 }
 
-.incident-card__students {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cp-gap-1);
-  margin-bottom: var(--cp-gap-2);
-}
-
-.incident-card__content {
+.incident-list__empty-desc {
   margin: 0 0 var(--cp-gap-2);
   font-size: var(--cp-font-sm);
-  color: var(--cp-text-2);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.incident-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cp-gap-1);
-  font-size: 12px;
   color: var(--cp-text-3);
 }
 
-.incident-card__severity {
-  color: var(--cp-warning);
-  letter-spacing: -1px;
-}
-
-.incident-card__follow--pending {
-  color: var(--cp-danger);
-  font-weight: 500;
-}
-
-.incident-card__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--cp-gap-1);
-  margin-top: var(--cp-gap-2);
-  padding-top: var(--cp-gap-2);
-  border-top: 1px solid var(--cp-divider);
-}
-
-.incident-list__empty {
-  text-align: center;
-  padding: var(--cp-gap-6);
-  color: var(--cp-text-3);
+@media (min-width: 1601px) {
+  .incident-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 </style>

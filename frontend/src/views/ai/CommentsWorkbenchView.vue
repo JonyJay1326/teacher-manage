@@ -673,6 +673,7 @@ function openStudent(): void {
 }
 
 .comments-wb__hero {
+  margin-bottom: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -711,7 +712,7 @@ function openStudent(): void {
 
 .comments-wb__main {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(360px, 1.65fr) minmax(200px, 0.8fr);
   gap: var(--cp-gap-4);
   min-height: 560px;
   align-items: stretch;
@@ -738,18 +739,18 @@ function openStudent(): void {
 .comments-wb__list-head {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--cp-gap-1);
   flex-shrink: 0;
 }
 
 .comments-wb__filter-btn {
   height: 28px;
-  padding: 0 2px;
+  padding: 0 var(--cp-gap-half);
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-ctl);
   background: var(--cp-bg-card);
   color: var(--cp-text-2);
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
@@ -758,7 +759,7 @@ function openStudent(): void {
 .comments-wb__filter-btn.is-active {
   border-color: var(--cp-primary);
   background: var(--cp-primary);
-  color: #fff;
+  color: var(--cp-text-on-brand);
   font-weight: 600;
 }
 
@@ -778,7 +779,7 @@ function openStudent(): void {
   column-gap: var(--cp-gap-2);
   width: 100%;
   min-height: 36px;
-  padding: 6px 8px;
+  padding: var(--cp-gap-compact) var(--cp-gap-2);
   border: 1px solid transparent;
   border-radius: var(--cp-radius-ctl);
   background: transparent;
@@ -813,7 +814,7 @@ function openStudent(): void {
 
 .comments-wb__status {
   justify-self: end;
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   line-height: 1.2;
   white-space: nowrap;
   color: var(--cp-text-3);
@@ -847,6 +848,7 @@ function openStudent(): void {
 }
 
 .comments-wb__editor-head {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -863,10 +865,11 @@ function openStudent(): void {
 .comments-wb__editor-head h3 {
   margin: 0;
   font-size: var(--cp-font-md);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .comments-wb__actions {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--cp-gap-2);
 }

@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { AnalysisRepository } from './analysis.repository';
 
+/**
+ * 将人数占比转为百分比数值（保留两位小数）。
+ * 例如 1/3 → 33.33，表示 33.33%。
+ */
+function toPercentRate(count: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.round((count / total) * 10000) / 100;
+}
+
 /** 总分趋势点 */
 export interface TotalTrendPoint {
   examId: number;
@@ -209,7 +218,7 @@ export class AnalysisService {
         subjectId,
         subjectName: bucket.name,
         avgScore: Math.round((sum / n) * 10) / 10,
-        lowRate: Math.round((lowCount / n) * 1000) / 10,
+        lowRate: toPercentRate(lowCount, n),
         sampleCount: n,
       });
     }
@@ -474,9 +483,10 @@ export class AnalysisService {
       items.push({
         subjectId,
         subjectName: bucket.name,
-        lowRate: Math.round((lowCount / n) * 1000) / 10,
-        passRate: Math.round((passCount / n) * 1000) / 10,
-        excellentRate: Math.round((excellentCount / n) * 1000) / 10,
+        // 统一为百分比数值，保留两位小数（如 12.34 表示 12.34%）
+        lowRate: toPercentRate(lowCount, n),
+        passRate: toPercentRate(passCount, n),
+        excellentRate: toPercentRate(excellentCount, n),
         sampleCount: n,
       });
     }

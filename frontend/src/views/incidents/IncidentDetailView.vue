@@ -374,6 +374,7 @@ onMounted(() => {
 }
 
 .incident-detail__draft {
+  overflow-wrap: anywhere;
   margin: 0;
   width: 100%;
   padding: var(--cp-gap-3);
@@ -412,6 +413,7 @@ onMounted(() => {
 }
 
 .incident-detail__att-pdf {
+  overflow-wrap: anywhere;
   color: var(--cp-primary);
   font-size: var(--cp-font-sm);
 }

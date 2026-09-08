@@ -14,6 +14,7 @@ import { AiRepository } from './ai.repository';
 import { AiService, type AiHealthView } from './ai.service';
 import { DataAskDto } from './data-qa.dto';
 import { DataQaService } from './data-qa.service';
+import { DemoCompleteDto } from './demo-complete.dto';
 import {
   CreatePromptDto,
   ListAiRecordsQueryDto,
@@ -41,6 +42,19 @@ export class AiController {
   @Get('health')
   health(): AiHealthView {
     return this.aiService.getHealth();
+  }
+
+  /**
+   * DeepSeek 纯转发：不查学生、不写业务表。
+   * 演示模式用 Mock 上下文调用，结果由前端写入内存库。
+   */
+  @Post('demo-complete')
+  demoComplete(@Body() dto: DemoCompleteDto) {
+    return this.aiService.demoComplete({
+      systemPrompt: dto.systemPrompt,
+      userPrompt: dto.userPrompt,
+      scene: dto.scene,
+    });
   }
 
   /** 学情问答 */

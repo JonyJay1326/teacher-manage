@@ -8,6 +8,7 @@ import {
   CHART_COLORS,
   CHART_STYLE,
   chartTooltip,
+  softLinePointItemStyle,
 } from '@/constants/chart';
 
 const props = defineProps<{
@@ -38,13 +39,7 @@ const trendOption = computed<EChartsOption>(() => {
       symbol: 'circle',
       symbolSize: 7,
       lineStyle: { width: 3, color: CHART_COLORS[0] },
-      itemStyle: {
-        color: CHART_COLORS[0],
-        borderColor: '#fff',
-        borderWidth: 2,
-        shadowBlur: 6,
-        shadowColor: CHART_STYLE.shadowColor,
-      },
+      itemStyle: softLinePointItemStyle(CHART_COLORS[0]),
     },
   ];
   if (hasGrade) {
@@ -56,7 +51,7 @@ const trendOption = computed<EChartsOption>(() => {
       symbol: 'diamond',
       symbolSize: 6,
       lineStyle: { width: 2, type: 'dashed', color: CHART_COLORS[5] },
-      itemStyle: { color: CHART_COLORS[5] },
+      itemStyle: softLinePointItemStyle(CHART_COLORS[5]),
     });
   }
   return {
@@ -110,6 +105,11 @@ function goAnalysis(): void {
 function goExam(): void {
   router.push(`/scores/exams/${props.brief.latestExamId}`);
 }
+
+/** 低分率展示为两位小数 */
+function formatLowRate(rate: number): string {
+  return Number(rate).toFixed(2);
+}
 </script>
 
 <template>
@@ -161,7 +161,7 @@ function goExam(): void {
                 <td>{{ row.subjectName }}</td>
                 <td class="score-brief__num">{{ row.avgScore }}</td>
                 <td class="score-brief__num score-brief__num--warn">
-                  {{ row.lowRate }}%
+                  {{ formatLowRate(row.lowRate) }}%
                 </td>
                 <td class="score-brief__num score-brief__num--muted">
                   {{ row.sampleCount }}
@@ -185,7 +185,7 @@ function goExam(): void {
 }
 
 .score-brief__avg {
-  color: var(--cp-domain-score);
+  color: var(--cp-domain-score-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -196,7 +196,7 @@ function goExam(): void {
 
 .score-brief__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--cp-gap-5);
 }
 
@@ -213,7 +213,7 @@ function goExam(): void {
 }
 
 .score-brief__panel-hint {
-  margin: 4px 0 var(--cp-gap-3);
+  margin: var(--cp-gap-1) 0 var(--cp-gap-3);
   font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
 }
@@ -231,7 +231,7 @@ function goExam(): void {
 
 .score-brief__table th,
 .score-brief__table td {
-  padding: 8px 10px;
+  padding: var(--cp-gap-2) var(--cp-gap-2);
   text-align: left;
   border-bottom: 1px solid var(--cp-divider);
 }

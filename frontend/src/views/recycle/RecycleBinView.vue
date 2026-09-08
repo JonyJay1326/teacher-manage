@@ -90,7 +90,10 @@ onMounted(() => {
         <el-radio-button value="kb_documents">知识库</el-radio-button>
       </el-radio-group>
 
-      <el-table :data="items" v-loading="loading" empty-text="回收站为空">
+<el-table :data="items" v-loading="loading" empty-text="回收站为空">
+        <template #empty>
+          <el-empty description="当前分类没有待恢复的数据" :image-size="72"></el-empty>
+        </template>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="标题" min-width="220" />
         <el-table-column label="备注" min-width="140">

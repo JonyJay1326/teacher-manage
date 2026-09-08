@@ -197,7 +197,7 @@ onMounted(() => {
             本次范围：{{ result.scopeLabel }}
           </div>
           <h3 class="data-ask__answer-title">回答</h3>
-          <div class="data-ask__answer" v-html="answerHtml" />
+          <div class="data-ask__answer cp-reading" v-html="answerHtml" />
 
           <h3 class="data-ask__answer-title">引用数据</h3>
           <el-empty
@@ -241,11 +241,12 @@ onMounted(() => {
 <style scoped>
 .data-ask__layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: var(--cp-gap-4);
   align-items: start;
 }
 .data-ask__scope {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-3);
@@ -280,15 +281,16 @@ onMounted(() => {
 }
 .data-ask__answer-title {
   margin: 0 0 var(--cp-gap-2);
-  font-size: 15px;
+  font-size: var(--cp-font-base);
   color: var(--cp-text-1);
 }
 .data-ask__answer {
+  border: 1px solid var(--cp-divider);
   line-height: 1.7;
   color: var(--cp-text-1);
   margin-bottom: var(--cp-gap-5);
   padding: var(--cp-gap-4);
-  background: var(--cp-primary-bg);
+  background: var(--cp-surface-subtle);
   border-radius: var(--cp-radius-ctl);
 }
 .data-ask__answer :deep(p) {
@@ -302,7 +304,7 @@ onMounted(() => {
   padding-left: 1.25em;
 }
 .data-ask__answer :deep(li) {
-  margin: 2px 0;
+  margin: var(--cp-gap-half) 0;
 }
 .data-ask__answer :deep(strong) {
   font-weight: 600;
@@ -310,7 +312,7 @@ onMounted(() => {
 }
 .data-ask__side-title {
   margin: 0 0 var(--cp-gap-3);
-  font-size: 15px;
+  font-size: var(--cp-font-base);
 }
 .data-ask__hist {
   padding: var(--cp-gap-3);
@@ -323,30 +325,30 @@ onMounted(() => {
   background: var(--cp-primary-bg);
 }
 .data-ask__hist-scope {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-primary);
-  margin-bottom: 2px;
+  margin-bottom: var(--cp-gap-half);
 }
 .data-ask__hist-q {
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-1);
-  margin-bottom: 4px;
+  margin-bottom: var(--cp-gap-1);
 }
 .data-ask__hist-a {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
   line-height: 1.4;
 }
 .data-ask__muted {
   color: var(--cp-text-3);
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
 }
 .data-ask__pre {
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
   line-height: 1.6;
   color: var(--cp-text-2);
 }

@@ -312,7 +312,7 @@ onMounted(() => {
 
 .prompts__main {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(360px, 1.8fr) minmax(180px, 0.7fr);
   gap: var(--cp-gap-4);
   min-height: 560px;
 }
@@ -364,9 +364,9 @@ onMounted(() => {
 }
 
 .prompts__item-meta {
-  margin-top: 2px;
+  margin-top: var(--cp-gap-half);
   color: var(--cp-text-3);
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
 }
 
 .prompts__editor--empty {
@@ -390,7 +390,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: var(--cp-gap-half);
   width: 100%;
   margin-bottom: var(--cp-gap-2);
   padding: var(--cp-gap-2);
@@ -403,12 +403,12 @@ onMounted(() => {
 }
 
 .prompts__ph code {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-primary);
 }
 
 .prompts__ph small {
   color: var(--cp-text-3);
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
 }
 </style>

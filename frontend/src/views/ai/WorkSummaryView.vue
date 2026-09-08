@@ -81,7 +81,7 @@ onMounted(() => {
     <el-card shadow="never" class="work-summary__card">
       <p v-if="message" class="work-summary__msg">{{ message }}</p>
       <p v-if="termName" class="work-summary__term">当前：{{ termName }}</p>
-      <div v-if="draftHtml" class="work-summary__draft" v-html="draftHtml" />
+      <div v-if="draftHtml" class="work-summary__draft cp-reading" v-html="draftHtml" />
       <el-empty v-else description="点击生成后显示初稿" :image-size="80" />
       <template v-if="contextText">
         <h3 class="work-summary__title">注入数据</h3>
@@ -93,6 +93,7 @@ onMounted(() => {
 
 <style scoped>
 .work-summary__actions {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--cp-gap-3);
   align-items: center;
@@ -100,6 +101,8 @@ onMounted(() => {
 
 .work-summary__card {
   border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-card);
+  box-shadow: var(--cp-shadow-1);
 }
 
 .work-summary__msg {
@@ -117,18 +120,9 @@ onMounted(() => {
 .work-summary__draft {
   line-height: 1.75;
   padding: var(--cp-gap-4);
-  background: var(--cp-primary-bg);
+  background: var(--cp-surface-subtle);
   border-radius: var(--cp-radius-ctl);
   margin-bottom: var(--cp-gap-5);
-}
-
-.work-summary__draft :deep(p) {
-  margin: 0 0 var(--cp-gap-2);
-}
-
-.work-summary__draft :deep(ul) {
-  margin: 0 0 var(--cp-gap-2);
-  padding-left: 1.25em;
 }
 
 .work-summary__title {

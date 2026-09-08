@@ -49,14 +49,14 @@ function goHome(): void {
 
 .coming-soon__title {
   margin: 0 0 var(--cp-gap-2);
-  font-size: 16px;
+  font-size: var(--cp-font-base);
   font-weight: 600;
   color: var(--cp-text-1);
 }
 
 .coming-soon__desc {
   margin: 0 0 var(--cp-gap-5);
-  font-size: 13px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-2);
 }
 </style>

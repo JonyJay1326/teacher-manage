@@ -5,6 +5,7 @@
 	import { ApiError } from '@/api/http'
 	import { createStudentApi, createTagApi, deleteStudentApi, importConfirmApi, importPreviewApi, listStudentsApi, listTagsApi, replaceStudentTagsApi, updateStudentApi } from '@/api/students'
 	import type { Student, StudentStatus, Tag } from '@/types'
+	import { tagDomainClass } from '@/utils/domainColor'
 
 	/** 导入动作 */
 	type ImportAction = 'create' | 'skip' | 'update'
@@ -227,7 +228,7 @@
 
 	/** 表格列头排序变更 */
 	function onSortChange(payload: {
-		prop: string
+		prop: string | null
 		order: 'ascending' | 'descending' | null
 	}): void {
 		if (
@@ -290,19 +291,13 @@
 		}
 	}
 
-	/** 表格行打开编辑（收窄 el-table 行类型） */
-	function openEditDialogFromTable(row: unknown): void {
-		openEditDialog(row as Student)
-	}
-
-	/** 有高敏明细的行加背景标注 */
+	/** 行样式：高敏行优先，其次按关注等级染色 */
 	function studentRowClassName({ row }: { row: Student }): string {
-		return row.hasSensitive ? 'student-list__row--sensitive' : ''
-	}
-
-	/** 表格行删除（收窄 el-table 行类型） */
-	function handleDeleteFromTable(row: unknown): void {
-		void handleDelete(row as Student)
+		if (row.hasSensitive) return 'student-list__row--sensitive'
+		if (row.focusLevel >= 3) return 'student-list__row--focus3'
+		if (row.focusLevel === 2) return 'student-list__row--focus2'
+		if (row.focusLevel === 1) return 'student-list__row--focus1'
+		return ''
 	}
 
 	/** 打开编辑对话框 */
@@ -492,7 +487,7 @@
 
 		<!-- 表格 -->
 		<el-card shadow="never" class="student-list__table-card" v-loading="listLoading">
-			<el-table
+<el-table
 				:data="students"
 				:stripe="false"
 				:row-class-name="studentRowClassName"
@@ -500,15 +495,15 @@
 				@row-click="handleRowClick"
 				@sort-change="onSortChange"
 			>
+        <template #empty>
+          <el-empty description="暂无匹配学生，可调整筛选条件或新增学生" :image-size="72"><el-button @click="openCreateDialog">新增学生</el-button></el-empty>
+        </template>
 				<el-table-column prop="studentNo" label="学号" width="110" fixed sortable="custom">
 					<template #default="{ row }">
 						<span class="cp-tabular-nums">{{ row.studentNo }}</span>
 					</template>
 				</el-table-column>
-				<el-table-column prop="name" label="姓名" width="100" fixed />
-				<el-table-column label="性别" width="70" align="center">
-					<template #default="{ row }">{{ genderLabel(row.gender) }}</template>
-				</el-table-column>
+				<el-table-column prop="name" label="姓名" width="120" fixed />
 				<el-table-column label="班干部" width="150">
 					<template #default="{ row }">
 						<el-tag v-if="row.cadreRole" type="primary" effect="plain" size="default">
@@ -519,17 +514,23 @@
 				</el-table-column>
 				<el-table-column prop="focusLevel" label="关注等级" width="120" align="center" sortable="custom">
 					<template #default="{ row }">
-						<el-tag :type="focusLevelType(row.focusLevel)" size="default">
+						<el-tag v-if="row.focusLevel > 0" :type="focusLevelType(row.focusLevel)" size="default">
 							{{ focusLevelLabel(row.focusLevel) }}
 						</el-tag>
+						<span v-else class="student-list__empty-cell">—</span>
 					</template>
 				</el-table-column>
 				<el-table-column label="标签" min-width="200">
 					<template #default="{ row }">
 						<el-space wrap :size="4">
-							<el-tag v-for="tag in getVisibleTags(row.tagIds)" :key="tag.id" type="info" effect="plain" size="default">
+							<span
+								v-for="tag in getVisibleTags(row.tagIds)"
+								:key="tag.id"
+								class="cp-domain-tag cp-domain-tag--sm"
+								:class="`cp-domain-tag--${tagDomainClass(tag.domain)}`"
+							>
 								{{ tag.name }}
-							</el-tag>
+							</span>
 						</el-space>
 					</template>
 				</el-table-column>
@@ -540,12 +541,12 @@
 						</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column label="操作" width="200" fixed="right" align="center">
+				<el-table-column label="操作" width="180" fixed="right" align="center">
 					<template #default="{ row }">
 						<div class="cp-table-actions">
 							<el-button text type="primary" @click.stop="goDetail(row.id)">详情</el-button>
-							<el-button text type="primary" @click.stop="openEditDialogFromTable(row)">编辑</el-button>
-							<el-button text type="danger" @click.stop="handleDeleteFromTable(row)">删除</el-button>
+							<el-button text type="primary" @click.stop="openEditDialog(row as Student)">编辑</el-button>
+							<el-button text type="danger" @click.stop="handleDelete(row as Student)">删除</el-button>
 						</div>
 					</template>
 				</el-table-column>
@@ -751,5 +752,31 @@
 	.student-list :deep(.el-table__row.student-list__row--sensitive:hover > td.el-table__cell) {
 		background-color: var(--cp-warning-bg) !important;
 		filter: brightness(0.98);
+	}
+
+	/* 关注等级行强调：首列左侧色条 + 极浅底色（等级越高越重） */
+	.student-list :deep(.el-table__row.student-list__row--focus1 > td.el-table__cell:first-child) {
+		border-left: 3px solid var(--cp-domain-praise);
+	}
+
+	.student-list :deep(.el-table__row.student-list__row--focus2 > td.el-table__cell:first-child) {
+		border-left: 3px solid var(--cp-warning);
+	}
+
+	.student-list :deep(.el-table__row.student-list__row--focus3 > td.el-table__cell:first-child) {
+		border-left: 3px solid var(--cp-danger);
+	}
+
+	.student-list :deep(.el-table__row.student-list__row--focus2 > td.el-table__cell) {
+		background-color: var(--cp-warning-subtle) !important;
+	}
+
+	.student-list :deep(.el-table__row.student-list__row--focus3 > td.el-table__cell) {
+		background-color: var(--cp-danger-subtle) !important;
+	}
+
+	.student-list :deep(.el-table__row.student-list__row--focus2:hover > td.el-table__cell),
+	.student-list :deep(.el-table__row.student-list__row--focus3:hover > td.el-table__cell) {
+		filter: brightness(0.985);
 	}
 </style>

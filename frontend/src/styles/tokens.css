@@ -17,6 +17,12 @@
   --cp-text-1: #0F172A;
   --cp-text-2: #475569;
   --cp-text-3: #64748B;
+  --cp-text-on-brand: #FFFFFF;
+  --cp-text-on-brand-muted: #E0F2FE;
+  --cp-surface-subtle: #F8FAFC;
+  --cp-surface-selected: #EFF6FF;
+  --cp-table-header: #F1F5F9;
+  --cp-overlay-light: rgba(255, 255, 255, 0.2);
 
   /* 功能色（饱和度更高） */
   --cp-success: #059669;
@@ -32,6 +38,19 @@
   --cp-domain-contact: #3DCF9A;
   --cp-domain-comment: #9B8CFF;
   --cp-domain-praise: #F5B942;
+  --cp-domain-score-text: #1D4ED8;
+  --cp-domain-score-bg: #E8F1FF;
+  --cp-domain-incident-text: #BE123C;
+  --cp-domain-incident-bg: #FFEDF2;
+  --cp-domain-contact-text: #047857;
+  --cp-domain-contact-bg: #E4F8EF;
+  --cp-domain-comment-text: #6D28D9;
+  --cp-domain-comment-bg: #F0ECFF;
+  --cp-domain-praise-text: #92400E;
+  --cp-domain-praise-bg: #FFF5DC;
+  --cp-warning-border: #FDBA74;
+  --cp-warning-subtle: #FFF7ED;
+  --cp-danger-subtle: #FFF1F2;
 
   /* 事件严重度 */
   --cp-sev-1: #64748B;
@@ -48,11 +67,20 @@
   --cp-radius-ctl: 10px;
   --cp-radius-tag: 999px;
   --cp-radius-modal: 16px;
+  --cp-radius-sm: 4px;
+  --cp-radius-round: 50%;
+  --cp-radius-edge: 0 4px 4px 0;
 
-  /* 允许的品牌渐变（仅侧栏 Logo 块 / 页面英雄横幅 / 头像点缀） */
+  /* 白名单：Logo / 英雄区 / 头像 / 导航选中；见 PRD D.0 确认口径 */
   --cp-gradient-brand: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%);
   --cp-gradient-hero: linear-gradient(120deg, #2563EB 0%, #1D4ED8 42%, #0EA5E9 100%);
   --cp-gradient-avatar: linear-gradient(135deg, #2563EB, #38BDF8);
+  --cp-gradient-nav: linear-gradient(90deg, #DBEAFE, #E0F2FE);
+  --cp-gradient-avatar-score: linear-gradient(135deg, #1D4ED8, #5B9CFF);
+  --cp-gradient-avatar-incident: linear-gradient(135deg, #BE123C, #FF7A9A);
+  --cp-gradient-avatar-contact: linear-gradient(135deg, #047857, #3DCF9A);
+  --cp-gradient-avatar-comment: linear-gradient(135deg, #6D28D9, #9B8CFF);
+  --cp-gradient-avatar-praise: linear-gradient(135deg, #92400E, #F5B942);
   --cp-page-atmosphere:
     radial-gradient(1000px 420px at 90% -5%, rgba(14, 165, 233, 0.14), transparent 55%),
     radial-gradient(800px 360px at 8% 0%, rgba(37, 99, 235, 0.12), transparent 50%),
@@ -65,6 +93,15 @@
   --cp-gap-4: 16px;
   --cp-gap-5: 24px;
   --cp-gap-6: 32px;
+  --cp-gap-hairline: 1px;
+  --cp-gap-half: 2px;
+  --cp-gap-compact: 6px;
+  --cp-sidebar-width: 220px;
+  --cp-sidebar-collapsed-width: 72px;
+  --cp-topbar-height: 56px;
+  --cp-row-height: 40px;
+  --cp-score-row-height: 48px;
+  --cp-tag-height: 22px;
 
   /* 字号阶梯（整体放大一档） */
   --cp-font-xs: 13px;
@@ -98,6 +135,9 @@
   --el-fill-color-blank: var(--cp-bg-card);
   --el-font-size-base: var(--cp-font-base);
   --el-font-size-small: var(--cp-font-sm);
+  --el-border-radius-round: var(--cp-radius-tag);
+  --el-box-shadow-light: var(--cp-shadow-1);
+  --el-box-shadow: var(--cp-shadow-2);
 
   /* 与 16px 按钮字号匹配的控件高度；small 略抬到 32，避免中文在 28 里显得挤/不齐 */
   --el-component-size: 36px;

@@ -973,6 +973,7 @@ onBeforeUnmount(() => {
                   <input
                     type="text"
                     class="score-cell__input cp-tabular-nums"
+                    :aria-label="`${row.name} ${subject.name}成绩`"
                     :data-entry-row="$index"
                     :data-entry-subject="subject.id"
                     :value="getCell(row as MultiEntryRow, subject.id).currentScore ?? ''"
@@ -1185,6 +1186,7 @@ onBeforeUnmount(() => {
 }
 
 .score-entry__header {
+  gap: var(--cp-gap-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1199,30 +1201,35 @@ onBeforeUnmount(() => {
 }
 
 .score-entry__header-left {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-3);
 }
 
 .score-entry__exam-name {
-  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--cp-font-base);
   font-weight: 600;
   color: var(--cp-text-1);
   white-space: nowrap;
 }
 
 .score-entry__progress {
-  font-size: 14px;
+  font-size: var(--cp-font-sm);
   color: var(--cp-text-2);
 }
 
 .score-entry__header-right {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-2);
 }
 
 .score-entry__table-wrap {
+  min-height: 0;
   flex: 1;
   overflow: hidden;
   padding: var(--cp-gap-4) var(--cp-gap-5);
@@ -1245,12 +1252,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
+  gap: var(--cp-gap-half);
 }
 
 .score-entry__last-score {
   color: var(--cp-text-3);
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   line-height: 1.2;
   text-align: center;
 }
@@ -1274,10 +1281,8 @@ onBeforeUnmount(() => {
   background: var(--cp-divider);
 }
 
-.score-cell--absent,
-.score-cell--exempt {
-  background: var(--cp-bg-page);
-}
+.score-cell--absent { background: var(--cp-warning-bg); }
+.score-cell--exempt { background: var(--cp-domain-comment-bg); }
 
 .score-cell--invalid {
   border-color: var(--cp-danger);
@@ -1315,12 +1320,12 @@ onBeforeUnmount(() => {
 }
 
 .score-entry__hint {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
 }
 
 .score-entry__full-score {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-2);
 }
 

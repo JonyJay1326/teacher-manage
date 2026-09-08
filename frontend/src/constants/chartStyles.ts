@@ -8,6 +8,8 @@ import {
   CHART_STYLE,
   chartColorAt,
   chartTooltip,
+  softHorizontalBarItemStyle,
+  softVerticalBarItemStyle,
 } from '@/constants/chart';
 
 /** 风格标识（仅软几何为全站规范） */
@@ -87,23 +89,7 @@ export function buildBarOption(_id?: ChartStyleId): EChartsOption {
           color: CHART_STYLE.barTrack,
           borderRadius: CHART_STYLE.capsuleRadius,
         },
-        itemStyle: {
-          borderRadius: CHART_STYLE.capsuleRadius,
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: CHART_STYLE.barGradientTop },
-              { offset: 1, color: primary },
-            ],
-          },
-          shadowBlur: CHART_STYLE.shadowBlur,
-          shadowColor: CHART_STYLE.shadowColor,
-          shadowOffsetY: 3,
-        },
+        itemStyle: softVerticalBarItemStyle(primary),
         emphasis: { focus: 'series' },
       },
     ],
@@ -131,7 +117,7 @@ export function buildPieOption(_id?: ChartStyleId): EChartsOption {
         padAngle: CHART_STYLE.piePadAngle,
         itemStyle: {
           borderRadius: CHART_STYLE.pieBorderRadius,
-          borderColor: '#fff',
+          borderColor: CHART_STYLE.seriesBorder,
           borderWidth: CHART_STYLE.pieBorderWidth,
           shadowBlur: 8,
           shadowColor: CHART_STYLE.shadowColor,
@@ -139,7 +125,12 @@ export function buildPieOption(_id?: ChartStyleId): EChartsOption {
         label: {
           color: CHART_STYLE.text,
           fontSize: 11,
-          formatter: '{b}\n{d}%',
+          formatter: (params: unknown) => {
+            const p = params as { name?: string; percent?: number };
+            const pct =
+              typeof p.percent === 'number' ? p.percent.toFixed(2) : '—';
+            return `${p.name ?? ''}\n${pct}%`;
+          },
         },
         labelLine: {
           length: 11,
@@ -152,7 +143,7 @@ export function buildPieOption(_id?: ChartStyleId): EChartsOption {
           scaleSize: 5,
           itemStyle: {
             shadowBlur: 14,
-            shadowColor: 'rgba(15,23,42,0.1)',
+            shadowColor: CHART_STYLE.shadowColor,
           },
         },
       },
@@ -195,22 +186,7 @@ export function buildHBarOption(_id?: ChartStyleId): EChartsOption {
         barWidth: CHART_STYLE.hBarWidth,
         barMaxWidth: CHART_STYLE.hBarMaxWidth,
         barCategoryGap: CHART_STYLE.barCategoryGap,
-        itemStyle: {
-          borderRadius: CHART_STYLE.hBarRadius,
-          shadowBlur: CHART_STYLE.shadowBlur,
-          shadowColor: CHART_STYLE.shadowColor,
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 1,
-            y2: 0,
-            colorStops: [
-              { offset: 0, color: CHART_STYLE.hBarGradientStart },
-              { offset: 1, color: primary },
-            ],
-          },
-        },
+        itemStyle: softHorizontalBarItemStyle(primary),
         label: {
           show: true,
           position: 'right',
@@ -259,7 +235,7 @@ export function buildBubbleOption(_id?: ChartStyleId): EChartsOption {
           opacity: CHART_STYLE.bubbleOpacity,
           shadowBlur: 10,
           shadowColor: CHART_STYLE.shadowColor,
-          borderColor: 'rgba(255,255,255,0.92)',
+          borderColor: CHART_STYLE.seriesBorder,
           borderWidth: CHART_STYLE.bubbleBorderWidth,
         },
         data: demoBubbles,

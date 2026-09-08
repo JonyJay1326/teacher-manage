@@ -42,6 +42,18 @@ async function loadData(): Promise<void> {
   }
 }
 
+/** 考试日期展示到日 */
+function formatExamDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** 获取单科可排序分数，未录/缺考/免考返回 null */
 function getSubjectSortScore(row: ExamScoreRow, subjectId: number): number | null {
   const cell = row.subjectScores[subjectId];
@@ -131,7 +143,7 @@ onMounted(() => {
       <div>
         <h2 class="cp-page-header__title">{{ exam?.name ?? '考试详情' }}</h2>
         <p class="cp-page-header__desc">
-          {{ exam?.examType }} · {{ exam?.examDate }} · {{ exam?.status }}
+          {{ exam?.examType }} · {{ formatExamDate(exam?.examDate) }} · {{ exam?.status }}
         </p>
       </div>
       <div class="exam-detail__actions">
@@ -216,6 +228,7 @@ onMounted(() => {
 
 <style scoped>
 .exam-detail__actions {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-2);
@@ -266,7 +279,7 @@ onMounted(() => {
 }
 
 .exam-detail__table :deep(.el-table__row) {
-  height: 48px;
+  height: var(--cp-score-row-height);
 }
 
 .exam-detail__table :deep(td.el-table__cell) {

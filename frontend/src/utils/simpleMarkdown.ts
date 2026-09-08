@@ -1,6 +1,6 @@
 /**
  * 将 AI 常用 Markdown 子集转为安全 HTML（零依赖）。
- * 支持：转义、**粗体**、行首 - / * 列表、换行。
+ * 支持：转义、标题 #~######、**粗体**、行首 -/* 无序与 1. 有序列表、换行。
  * 不支持：链接、图片、代码块、HTML 原样注入。
  */
 export function renderSimpleMarkdown(source: string): string {
@@ -11,32 +11,63 @@ export function renderSimpleMarkdown(source: string): string {
 
   const lines = escaped.split(/\r?\n/);
   const htmlParts: string[] = [];
-  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
+
+  /** 关闭当前列表 */
+  function closeList(): void {
+    if (listType === 'ul') htmlParts.push('</ul>');
+    if (listType === 'ol') htmlParts.push('</ol>');
+    listType = null;
+  }
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
-    const listMatch = /^[-*]\s+(.+)$/.exec(line.trim());
-    if (listMatch) {
-      if (!inList) {
-        htmlParts.push('<ul>');
-        inList = true;
-      }
-      htmlParts.push(`<li>${applyInline(listMatch[1])}</li>`);
+    const trimmed = line.trim();
+
+    const headingMatch = /^(#{1,6})\s+(.+)$/.exec(trimmed);
+    if (headingMatch) {
+      closeList();
+      const level = headingMatch[1]!.length;
+      htmlParts.push(
+        `<h${level}>${applyInline(headingMatch[2]!)}</h${level}>`,
+      );
       continue;
     }
-    if (inList) {
-      htmlParts.push('</ul>');
-      inList = false;
+
+    const ulMatch = /^[-*]\s+(.+)$/.exec(trimmed);
+    if (ulMatch) {
+      if (listType !== 'ul') {
+        closeList();
+        htmlParts.push('<ul>');
+        listType = 'ul';
+      }
+      htmlParts.push(`<li>${applyInline(ulMatch[1]!)}</li>`);
+      continue;
     }
-    if (line.trim() === '') {
+
+    const olMatch = /^\d+\.\s+(.+)$/.exec(trimmed);
+    if (olMatch) {
+      if (listType !== 'ol') {
+        closeList();
+        htmlParts.push('<ol>');
+        listType = 'ol';
+      }
+      htmlParts.push(`<li>${applyInline(olMatch[1]!)}</li>`);
+      continue;
+    }
+
+    closeList();
+    if (trimmed === '') {
       htmlParts.push('<br />');
+      continue;
+    }
+    if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+      htmlParts.push('<hr />');
       continue;
     }
     htmlParts.push(`<p>${applyInline(line)}</p>`);
   }
-  if (inList) {
-    htmlParts.push('</ul>');
-  }
+  closeList();
   return htmlParts.join('');
 }
 

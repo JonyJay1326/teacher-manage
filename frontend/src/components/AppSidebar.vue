@@ -2,11 +2,12 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import type { NavGroup } from '@/types';
+import { isDemoPath, withDemoPrefix, stripDemoPrefix } from '@/demo/path';
 
 const route = useRoute();
 
-/** 导航分组配置 */
-const navGroups: NavGroup[] = [
+/** 导航分组配置（业务路径，演示态再加前缀） */
+const baseNavGroups: NavGroup[] = [
   {
     label: '工作台',
     items: [{ path: '/', title: '首页看板', icon: 'Odometer' }],
@@ -55,24 +56,39 @@ defineProps<{
   collapsed: boolean;
 }>();
 
+const inDemo = computed(() => isDemoPath(route.path));
+
+/** 侧栏菜单（演示态路径带 /demo） */
+const navGroups = computed(() => {
+  if (!inDemo.value) return baseNavGroups;
+  return baseNavGroups.map((g) => ({
+    ...g,
+    items: g.items.map((item) => ({
+      ...item,
+      path: withDemoPrefix(item.path),
+    })),
+  }));
+});
+
 /** 当前激活菜单路径 */
 const activeMenu = computed(() => {
-  const path = route.path;
-  if (path === '/') return '/';
-  if (path.startsWith('/students')) return '/students';
-  if (path.startsWith('/scores')) return '/scores';
-  if (path.startsWith('/incidents')) return '/incidents';
-  if (path.startsWith('/knowledge/ask')) return '/knowledge/ask';
-  if (path.startsWith('/knowledge')) return '/knowledge';
-  if (path.startsWith('/ai/comments')) return '/ai/comments';
-  if (path.startsWith('/ai/ask')) return '/ai/ask';
-  if (path.startsWith('/ai/talk')) return '/ai/talk';
-  if (path.startsWith('/ai/summary')) return '/ai/summary';
-  if (path.startsWith('/ai/prompts')) return '/ai/prompts';
-  if (path.startsWith('/ai/records')) return '/ai/records';
-  if (path.startsWith('/analysis')) return '/analysis';
-  if (path.startsWith('/recycle')) return '/recycle';
-  return path;
+  const logical = stripDemoPrefix(route.path);
+  let key = logical;
+  if (logical === '/') key = '/';
+  else if (logical.startsWith('/students')) key = '/students';
+  else if (logical.startsWith('/scores')) key = '/scores';
+  else if (logical.startsWith('/incidents')) key = '/incidents';
+  else if (logical.startsWith('/knowledge/ask')) key = '/knowledge/ask';
+  else if (logical.startsWith('/knowledge')) key = '/knowledge';
+  else if (logical.startsWith('/ai/comments')) key = '/ai/comments';
+  else if (logical.startsWith('/ai/ask')) key = '/ai/ask';
+  else if (logical.startsWith('/ai/talk')) key = '/ai/talk';
+  else if (logical.startsWith('/ai/summary')) key = '/ai/summary';
+  else if (logical.startsWith('/ai/prompts')) key = '/ai/prompts';
+  else if (logical.startsWith('/ai/records')) key = '/ai/records';
+  else if (logical.startsWith('/analysis')) key = '/analysis';
+  else if (logical.startsWith('/recycle')) key = '/recycle';
+  return inDemo.value ? withDemoPrefix(key) : key;
 });
 </script>
 
@@ -82,11 +98,12 @@ const activeMenu = computed(() => {
       <img src="/favicon.svg" alt="ClassPilot" class="sidebar__logo-icon" />
       <div v-show="!collapsed" class="sidebar__brand">
         <span class="sidebar__logo-text">ClassPilot</span>
-        <span class="sidebar__logo-tag">班级领航员</span>
+        <span class="sidebar__logo-tag">{{ inDemo ? '演示数据' : '班级领航员' }}</span>
       </div>
     </div>
     <el-scrollbar class="sidebar__scroll">
       <el-menu
+        :key="inDemo ? 'demo-nav' : 'live-nav'"
         :default-active="activeMenu"
         :collapse="collapsed"
         :collapse-transition="false"

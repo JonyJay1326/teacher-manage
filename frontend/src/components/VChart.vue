@@ -39,6 +39,8 @@ const props = defineProps<{
 const chartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let resizeFrame: number | null = null;
+let disposed = false;
 
 /** 容器是否已有有效宽高（隐藏 Tab 内常为 0） */
 function hasValidSize(el: HTMLElement): boolean {
@@ -47,21 +49,22 @@ function hasValidSize(el: HTMLElement): boolean {
 
 /** 初始化或在尺寸就绪后补 resize */
 function initChart(): void {
-  if (!chartRef.value) return;
+  if (disposed || !chartRef.value || !hasValidSize(chartRef.value)) return;
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value);
   }
   chartInstance.setOption(props.option, true);
-  scheduleResize();
+  chartInstance.resize();
 }
 
 /** 下一帧再 resize，避开首屏布局未完成 */
 function scheduleResize(): void {
-  requestAnimationFrame(() => {
-    if (!chartRef.value || !chartInstance) return;
-    if (hasValidSize(chartRef.value)) {
-      chartInstance.resize();
-    }
+  if (disposed || resizeFrame !== null) return;
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = null;
+    if (disposed || !chartRef.value || !hasValidSize(chartRef.value)) return;
+    if (!chartInstance) initChart();
+    else chartInstance.resize();
   });
 }
 
@@ -75,10 +78,7 @@ function setupResizeObserver(): void {
   if (!chartRef.value || typeof ResizeObserver === 'undefined') return;
   resizeObserver?.disconnect();
   resizeObserver = new ResizeObserver(() => {
-    if (!chartRef.value || !chartInstance) return;
-    if (hasValidSize(chartRef.value)) {
-      chartInstance.resize();
-    }
+    scheduleResize();
   });
   resizeObserver.observe(chartRef.value);
 }
@@ -98,12 +98,16 @@ watch(
 
 onMounted(async () => {
   await nextTick();
+  if (disposed) return;
   initChart();
   setupResizeObserver();
   window.addEventListener('resize', handleWindowResize);
 });
 
 onUnmounted(() => {
+  disposed = true;
+  if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+  resizeFrame = null;
   window.removeEventListener('resize', handleWindowResize);
   resizeObserver?.disconnect();
   resizeObserver = null;

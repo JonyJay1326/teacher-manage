@@ -940,8 +940,6 @@ const radarOption = computed<EChartsOption>(() => {
       appendToBody: true,
       confine: false,
       textStyle: { color: CHART_STYLE.text, fontSize: 13 },
-      extraCssText:
-        'box-shadow: 0 14px 36px rgba(91, 156, 255, 0.16); border-radius: 12px; z-index: 4000;',
       /** 数值统一保留两位小数 */
       formatter: (params: unknown) => {
         const p = params as {
@@ -981,20 +979,15 @@ const radarOption = computed<EChartsOption>(() => {
         padding: [3, 4],
       },
       axisLine: {
-        lineStyle: { color: 'rgba(91, 156, 255, 0.35)', width: 1 },
+        lineStyle: { color: CHART_STYLE.radarAxis, width: 1 },
       },
       splitLine: {
-        lineStyle: { color: 'rgba(147, 197, 253, 0.55)', width: 1 },
+        lineStyle: { color: CHART_STYLE.radarSplitLine, width: 1 },
       },
       splitArea: {
         show: true,
         areaStyle: {
-          color: [
-            'rgba(219, 234, 254, 0.55)',
-            'rgba(255, 255, 255, 0.35)',
-            'rgba(191, 219, 254, 0.45)',
-            'rgba(255, 255, 255, 0.25)',
-          ],
+          color: [...CHART_STYLE.radarSplitArea],
         },
       },
     },
@@ -1010,12 +1003,12 @@ const radarOption = computed<EChartsOption>(() => {
             lineStyle: { color: primary, width: 2.5 },
             itemStyle: {
               color: primary,
-              borderColor: '#FFFFFF',
+              borderColor: CHART_STYLE.seriesBorder,
               borderWidth: 2,
               shadowBlur: 8,
               shadowColor: CHART_STYLE.shadowColor,
             },
-            areaStyle: { color: 'rgba(91, 156, 255, 0.28)' },
+            areaStyle: { color: CHART_STYLE.radarStudentArea },
           },
           {
             value: classValues,
@@ -1023,10 +1016,10 @@ const radarOption = computed<EChartsOption>(() => {
             lineStyle: { color: secondary, width: 2, type: 'dashed' },
             itemStyle: {
               color: secondary,
-              borderColor: '#FFFFFF',
+              borderColor: CHART_STYLE.seriesBorder,
               borderWidth: 2,
             },
-            areaStyle: { color: 'rgba(61, 207, 154, 0.12)' },
+            areaStyle: { color: CHART_STYLE.radarClassArea },
           },
         ],
       },
@@ -1760,9 +1753,7 @@ watch(activeTab, (tab) => {
   margin-bottom: var(--cp-gap-4);
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-card);
-  background:
-    linear-gradient(135deg, var(--cp-primary-bg) 0%, transparent 42%),
-    var(--cp-bg-card);
+  background: var(--cp-bg-card);
 }
 
 .student-detail__header-inner {
@@ -1773,19 +1764,21 @@ watch(activeTab, (tab) => {
 
 .student-detail__photo {
   border-radius: var(--cp-radius-card);
-  background: linear-gradient(145deg, var(--cp-primary) 0%, var(--cp-primary-active) 100%);
-  color: #fff;
-  font-size: 28px;
+  background: var(--cp-gradient-avatar);
+  color: var(--cp-text-on-brand);
+  font-size: var(--cp-font-lg);
   font-weight: 700;
   flex-shrink: 0;
   box-shadow: var(--cp-shadow-1);
 }
 
 .student-detail__info {
+  min-width: 0;
   flex: 1;
 }
 
 .student-detail__name-row {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: var(--cp-gap-3);
@@ -1807,23 +1800,24 @@ watch(activeTab, (tab) => {
 .student-detail__no {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--cp-gap-1);
   font-size: var(--cp-font-base);
   color: var(--cp-text-2);
 }
 
 .student-detail__no-icon {
-  font-size: 14px;
+  font-size: var(--cp-font-sm);
   color: var(--cp-primary);
 }
 
 .student-detail__meta-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--cp-gap-1);
 }
 
 .student-detail__focus {
+  flex-shrink: 0;
   display: flex;
   flex-direction: row;
   align-items: flex-end;
@@ -1840,7 +1834,7 @@ watch(activeTab, (tab) => {
 .student-detail__focus-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--cp-gap-1);
   font-size: var(--cp-font-sm);
   font-weight: 500;
   color: var(--cp-text-2);
@@ -1895,11 +1889,12 @@ watch(activeTab, (tab) => {
 }
 
 .archive-block__icon {
-  font-size: 18px;
+  font-size: var(--cp-font-md);
   color: var(--cp-primary);
 }
 
 .archive-block__title {
+  line-height: 1.6;
   font-size: var(--cp-font-base);
   font-weight: 600;
   color: var(--cp-text-1);
@@ -1914,7 +1909,7 @@ watch(activeTab, (tab) => {
 .archive-info-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--cp-gap-compact);
   padding: var(--cp-gap-3);
   border-radius: var(--cp-radius-ctl);
   background: var(--cp-bg-page);
@@ -1924,7 +1919,7 @@ watch(activeTab, (tab) => {
 .archive-info-item__label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--cp-gap-compact);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-3);
 }
@@ -1968,7 +1963,7 @@ watch(activeTab, (tab) => {
 .guardian-card__avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--cp-radius-round);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1988,7 +1983,7 @@ watch(activeTab, (tab) => {
   display: flex;
   align-items: center;
   gap: var(--cp-gap-2);
-  margin-bottom: 4px;
+  margin-bottom: var(--cp-gap-1);
 }
 
 .guardian-card__actions {
@@ -2004,7 +1999,7 @@ watch(activeTab, (tab) => {
   margin: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--cp-gap-compact);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-2);
   line-height: 1.6;
@@ -2012,7 +2007,7 @@ watch(activeTab, (tab) => {
 
 .sensitive-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--cp-gap-4);
 }
 
@@ -2046,6 +2041,7 @@ watch(activeTab, (tab) => {
 }
 
 .scores-section__header {
+  flex-wrap: wrap;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -2067,7 +2063,7 @@ watch(activeTab, (tab) => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--cp-gap-half);
   min-width: 56px;
 }
 
@@ -2123,17 +2119,14 @@ watch(activeTab, (tab) => {
   padding: var(--cp-gap-3) var(--cp-gap-4) var(--cp-gap-2);
   border-radius: var(--cp-radius-card);
   border: 1px solid var(--cp-primary-border);
-  background:
-    radial-gradient(520px 220px at 12% 0%, rgba(37, 99, 235, 0.12), transparent 60%),
-    radial-gradient(480px 200px at 92% 100%, rgba(14, 165, 233, 0.1), transparent 55%),
-    linear-gradient(180deg, var(--cp-primary-bg) 0%, #ffffff 72%);
+  background: var(--cp-bg-card);
   box-shadow: var(--cp-shadow-1);
   overflow: visible;
 }
 
 .timeline {
   position: relative;
-  padding-left: 28px;
+  padding-left: var(--cp-gap-5);
 }
 
 .timeline-toolbar {
@@ -2180,9 +2173,9 @@ watch(activeTab, (tab) => {
 .timeline__dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--cp-radius-round);
   background: var(--cp-text-3);
-  box-shadow: 0 0 0 3px var(--cp-bg-card);
+  box-shadow: none;
 }
 
 .timeline__dot--score { background: var(--cp-domain-score); }
@@ -2192,6 +2185,8 @@ watch(activeTab, (tab) => {
 .timeline__dot--praise { background: var(--cp-domain-praise); }
 
 .timeline__card {
+  min-width: 0;
+  overflow-wrap: anywhere;
   flex: 1;
   border-left: 5px solid var(--cp-border);
   transition: box-shadow 0.2s ease;
@@ -2238,7 +2233,7 @@ watch(activeTab, (tab) => {
 }
 
 .timeline__score-meta strong {
-  margin-left: 4px;
+  margin-left: var(--cp-gap-1);
   color: var(--cp-domain-score);
   font-size: var(--cp-font-base);
 }
@@ -2252,7 +2247,7 @@ watch(activeTab, (tab) => {
 .timeline__score-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--cp-gap-half);
   padding: var(--cp-gap-2);
   background: var(--cp-bg-page);
   border-radius: var(--cp-radius-ctl);
@@ -2271,7 +2266,7 @@ watch(activeTab, (tab) => {
 }
 
 .timeline__score-rank {
-  font-size: 12px;
+  font-size: var(--cp-font-xs);
   color: var(--cp-text-2);
 }
 
@@ -2295,7 +2290,7 @@ watch(activeTab, (tab) => {
 
 .comments-tab__card {
   border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-md);
+  border-radius: var(--cp-radius-card);
 }
 
 .comments-tab__meta {

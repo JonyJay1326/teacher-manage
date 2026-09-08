@@ -266,6 +266,8 @@ onMounted(() => {
 .dashboard__todo-card--side:not(.dashboard__todo-card--empty) :deep(.el-card__body) {
   max-height: 220px;
   overflow-y: auto;
+  /* 上下留白，避免首尾行 hover 阴影被裁切 */
+  padding-block: var(--cp-gap-2);
 }
 
 .dashboard__todo-card--empty :deep(.el-card__body) {
@@ -287,7 +289,7 @@ onMounted(() => {
 }
 
 .focus-grid--side .focus-card {
-  padding: 12px;
+  padding: var(--cp-gap-3);
 }
 
 .focus-grid--side .focus-card__summary {
@@ -295,13 +297,13 @@ onMounted(() => {
 }
 
 .focus-card {
-  padding: 18px;
+  padding: var(--cp-gap-4);
 }
 
 .focus-card--warning {
-  border-color: #fdba74;
-  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 65%);
-  box-shadow: 0 14px 36px rgba(234, 88, 12, 0.12);
+  border-color: var(--cp-warning-border);
+  background: var(--cp-bg-card);
+  box-shadow: none;
 }
 
 .focus-card__header {
@@ -319,10 +321,10 @@ onMounted(() => {
 
 .focus-card__avatar {
   background: var(--cp-gradient-avatar);
-  color: #fff;
+  color: var(--cp-text-on-brand);
   font-weight: 800;
   font-size: var(--cp-font-base);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+  box-shadow: none;
 }
 
 .focus-card__name {
@@ -342,9 +344,9 @@ onMounted(() => {
 .focus-card__summary--masked {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--cp-gap-compact);
   max-width: 100%;
-  padding: 4px 8px;
+  padding: var(--cp-gap-1) var(--cp-gap-2);
   border-radius: var(--cp-radius-ctl);
   background: var(--cp-bg-page);
   border: 1px dashed var(--cp-divider);
@@ -354,7 +356,7 @@ onMounted(() => {
 
 .focus-card__summary-icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--cp-font-sm);
   color: var(--cp-text-3);
 }
 
@@ -371,41 +373,64 @@ onMounted(() => {
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: var(--cp-gap-3);
+  gap: var(--cp-gap-2);
 }
 
 .todo-item {
   display: flex;
   align-items: flex-start;
   gap: var(--cp-gap-3);
-  padding: var(--cp-gap-2) 0;
+  padding: var(--cp-gap-2) var(--cp-gap-3);
 }
 
 .todo-item--clickable {
   cursor: pointer;
   border-radius: var(--cp-radius-ctl);
-  margin: 0 calc(var(--cp-gap-2) * -1);
-  padding-left: var(--cp-gap-2);
-  padding-right: var(--cp-gap-2);
-  transition: background-color 0.15s ease;
+  /* 阴影落在行内：去掉负 margin，并裁切红点波动环外溢 */
+  margin: 0;
+  overflow: hidden;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .todo-item--clickable:hover {
   background: var(--cp-primary-bg);
+  /* 卡片档阴影，范围贴合行高亮区 */
+  box-shadow: var(--cp-shadow-1);
+  position: relative;
+  z-index: 1;
 }
 
 .todo-item--clickable:hover .todo-item__title {
   color: var(--cp-primary);
 }
 
+/* 待办红点波动收紧，避免扩散环看起来像大范围阴影 */
+.todo-item .cp-pulse-dot::before,
+.todo-item .cp-pulse-dot::after {
+  animation-name: todo-pulse-ring;
+}
+
+@keyframes todo-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
 .todo-item__dot {
   width: 10px;
   height: 10px;
-  margin-top: 6px;
-  border-radius: 50%;
+  margin-top: var(--cp-gap-compact);
+  border-radius: var(--cp-radius-round);
   background: var(--cp-danger);
   flex-shrink: 0;
-  box-shadow: 0 0 0 4px var(--cp-danger-bg);
+  box-shadow: none;
   z-index: 1;
 }
 
@@ -451,7 +476,7 @@ onMounted(() => {
 /* tooltip 挂到 body，需非 scoped；白色气泡与设计令牌对齐 */
 .focus-card__summary-popper.el-popper {
   max-width: 320px;
-  padding: 12px 14px;
+  padding: var(--cp-gap-3) var(--cp-gap-3);
   border-radius: var(--cp-radius-card);
   border: 1px solid var(--cp-border);
   background: var(--cp-bg-card);
