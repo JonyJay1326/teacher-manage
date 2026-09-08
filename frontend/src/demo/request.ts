@@ -1,6 +1,7 @@
 import { ApiError } from '@/api/http';
 import type { Student } from '@/types';
 import { tryHandleDemoAi } from './aiGenerate';
+import { getDemoToday } from './calendar';
 import { buildDemoCommentContext } from './commentContext';
 import { allocDemoId, getDemoDb, resetDemoDb } from './db';
 import { buildExamMatrix } from './seed';
@@ -1146,6 +1147,40 @@ function buildDashboardHome(): unknown {
   };
 }
 
+/** 本地日历日格式化为 YYYY-MM-DD */
+function formatLocalYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** 演示沟通热力：以演示「今天」为终点的最近 N 天 */
+function buildDemoContactHeatmap(days: number): {
+  days: number;
+  rangeStart: string;
+  rangeEnd: string;
+  cells: Array<[string, number]>;
+  maxCount: number;
+} {
+  const end = getDemoToday();
+  const start = new Date(end.getTime());
+  start.setDate(start.getDate() - (days - 1));
+  const cells: Array<[string, number]> = [];
+  for (let i = 0; i < days; i += 1) {
+    const day = new Date(start.getTime());
+    day.setDate(start.getDate() + i);
+    cells.push([formatLocalYmd(day), Math.floor(Math.random() * 4)]);
+  }
+  return {
+    days,
+    rangeStart: formatLocalYmd(start),
+    rangeEnd: formatLocalYmd(end),
+    cells,
+    maxCount: 4,
+  };
+}
+
 /** 分析中心 */
 function buildAnalysis(q: URLSearchParams): unknown {
   const db = getDemoDb();
@@ -1306,16 +1341,7 @@ function buildAnalysis(q: URLSearchParams): unknown {
       decline: decline.slice(0, 8),
     },
     focusFrequency: { days: 90, items: focusFrequency },
-    contactHeatmap: {
-      days: 28,
-      rangeStart: '2026-02-01',
-      rangeEnd: '2026-02-28',
-      cells: Array.from({ length: 28 }, (_, i) => [
-        `2026-02-${String(i + 1).padStart(2, '0')}`,
-        Math.floor(Math.random() * 4),
-      ]),
-      maxCount: 4,
-    },
+    contactHeatmap: buildDemoContactHeatmap(28),
     categoryDistribution: {
       termId: db.terms[db.terms.length - 1]?.id ?? null,
       termName: db.terms[db.terms.length - 1]?.name ?? null,

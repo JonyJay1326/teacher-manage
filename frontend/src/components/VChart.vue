@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick, useId } from 'vue';
 import * as echarts from 'echarts/core';
 import { LineChart, BarChart, RadarChart, HeatmapChart, PieChart, ScatterChart } from 'echarts/charts';
 import {
@@ -51,6 +51,10 @@ const emit = defineEmits<{
 }>();
 
 const chartRef = ref<HTMLDivElement | null>(null);
+/** 读屏 live 区域 id，与图表 aria-describedby 关联 */
+const liveRegionId = useId();
+/** 当前数据点的可读说明（读屏朗读，不替代视觉 tooltip） */
+const liveDescription = ref('');
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let resizeFrame: number | null = null;
@@ -60,6 +64,97 @@ let focusedDataIndex = 0;
 /** 容器是否已有有效宽高（隐藏 Tab 内常为 0） */
 function hasValidSize(el: HTMLElement): boolean {
   return el.clientWidth > 0 && el.clientHeight > 0;
+}
+
+/** 把数据点值转成可读短句 */
+function formatDatumValue(raw: unknown): string {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
+  if (typeof raw === 'string') return raw;
+  if (raw == null) return '';
+  if (Array.isArray(raw)) {
+    if (
+      raw.length >= 4
+      && typeof raw[0] === 'number'
+      && typeof raw[2] === 'number'
+      && typeof raw[3] === 'string'
+    ) {
+      return `${raw[0]} 分，${raw[2]} 人，${raw[3]}`;
+    }
+    if (raw.length >= 2 && typeof raw[0] === 'string' && typeof raw[1] === 'number') {
+      return `${raw[0]}，${raw[1]}`;
+    }
+    const nums = raw.filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+    if (nums.length === 1) return String(nums[0]);
+    if (nums.length > 1) return nums.map(String).join('，');
+    return raw.filter((x): x is string => typeof x === 'string').join('、');
+  }
+  if (typeof raw === 'object') {
+    const obj = raw as { name?: unknown; value?: unknown };
+    const valueText = obj.value !== undefined ? formatDatumValue(obj.value) : '';
+    const itemName = typeof obj.name === 'string' ? obj.name : '';
+    if (itemName && valueText) return `${itemName} ${valueText}`;
+    return valueText || itemName;
+  }
+  return '';
+}
+
+/** 根据当前 option 拼出读屏文案（类目轴则汇总各系列） */
+function buildLiveDescription(
+  seriesIndex: number,
+  dataIndex: number,
+  fallbackData?: unknown,
+  name = '',
+): string {
+  if (!chartInstance) return '';
+  const option = chartInstance.getOption() as { series?: unknown; xAxis?: unknown };
+  const seriesRaw = option.series;
+  const seriesList = Array.isArray(seriesRaw) ? seriesRaw : seriesRaw ? [seriesRaw] : [];
+  if (seriesList.length === 0) return '';
+
+  const xAxisRaw = option.xAxis;
+  const xAxis = Array.isArray(xAxisRaw) ? xAxisRaw[0] : xAxisRaw;
+  const categories =
+    xAxis && typeof xAxis === 'object' && Array.isArray((xAxis as { data?: unknown }).data)
+      ? (xAxis as { data: unknown[] }).data
+      : [];
+  const categoryFromAxis = categories[dataIndex];
+  const categoryLabel =
+    name
+    || (typeof categoryFromAxis === 'string' || typeof categoryFromAxis === 'number'
+      ? String(categoryFromAxis)
+      : '');
+
+  const lines: string[] = [];
+  for (let i = 0; i < seriesList.length; i += 1) {
+    const seriesItem = seriesList[i];
+    if (!seriesItem || typeof seriesItem !== 'object') continue;
+    const rec = seriesItem as { name?: unknown; data?: unknown };
+    const dataArr = Array.isArray(rec.data) ? rec.data : [];
+    const point = i === seriesIndex && fallbackData !== undefined ? fallbackData : dataArr[dataIndex];
+    const seriesName = typeof rec.name === 'string' && rec.name ? rec.name : '';
+    const valueText = formatDatumValue(point);
+    if (!valueText) continue;
+    lines.push(seriesName ? `${seriesName} ${valueText}` : valueText);
+  }
+
+  if (lines.length === 0) {
+    const fallback = formatDatumValue(fallbackData);
+    if (!fallback) return '';
+    return categoryLabel ? `${categoryLabel}，${fallback}` : fallback;
+  }
+  const body = lines.join('，');
+  return categoryLabel ? `${categoryLabel}：${body}` : body;
+}
+
+/** 刷新读屏 live 区域 */
+function updateLiveDescription(
+  seriesIndex: number,
+  dataIndex: number,
+  fallbackData?: unknown,
+  name = '',
+): void {
+  liveDescription.value =
+    buildLiveDescription(seriesIndex, dataIndex, fallbackData, name) || '暂无数据点';
 }
 
 /** 读取第一系列数据长度，供键盘切换 */
@@ -85,6 +180,7 @@ function emitSelect(seriesIndex: number, dataIndex: number, fallbackData?: unkno
       ? (target as { data: unknown[] }).data
       : [];
   const data = fallbackData ?? dataArr[dataIndex];
+  updateLiveDescription(seriesIndex, dataIndex, data, name);
   emit('select', {
     seriesIndex,
     dataIndex,
@@ -169,12 +265,12 @@ function setupResizeObserver(): void {
   resizeObserver.observe(chartRef.value);
 }
 
-/** 键盘聚焦时展示当前数据点 tooltip */
+/** 键盘聚焦时展示当前数据点 tooltip 并朗读 */
 function handleFocus(): void {
   showTipAt(focusedDataIndex);
 }
 
-/** 失焦时收起 tooltip */
+/** 失焦时收起视觉 tooltip（读屏文案保留在 describedby 中） */
 function handleBlur(): void {
   chartInstance?.dispatchAction({ type: 'hideTip' });
 }
@@ -237,19 +333,36 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    ref="chartRef"
-    class="v-chart"
-    tabindex="0"
-    :aria-label="ariaLabel ?? '图表，点击或使用方向键查看数据点详情'"
-    :style="{ width: '100%', height: height ?? '240px' }"
-    @focus="handleFocus"
-    @blur="handleBlur"
-    @keydown="handleKeydown"
-  />
+  <div class="v-chart-wrap">
+    <div
+      ref="chartRef"
+      class="v-chart"
+      tabindex="0"
+      :aria-label="ariaLabel ?? '图表，方向键可浏览数据点'"
+      :aria-describedby="liveRegionId"
+      :style="{ width: '100%', height: height ?? '240px' }"
+      @focus="handleFocus"
+      @blur="handleBlur"
+      @keydown="handleKeydown"
+    />
+    <p
+      :id="liveRegionId"
+      class="v-chart__live"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {{ liveDescription }}
+    </p>
+  </div>
 </template>
 
 <style scoped>
+.v-chart-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
 .v-chart {
   min-width: 0;
   min-height: 120px;
@@ -259,5 +372,18 @@ onUnmounted(() => {
   outline: 2px solid var(--cp-primary);
   outline-offset: 2px;
   border-radius: var(--cp-radius-ctl);
+}
+
+/* 读屏专用：不占视觉空间，避免 display:none 导致 live 不播报 */
+.v-chart__live {
+  position: absolute;
+  width: var(--cp-gap-hairline);
+  height: var(--cp-gap-hairline);
+  padding: 0;
+  margin: calc(var(--cp-gap-hairline) * -1);
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>
