@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { EChartsOption } from 'echarts';
-import VChart from '@/components/VChart.vue';
+import VChart, { type ChartSelectPayload } from '@/components/VChart.vue';
 import {
   CHART_STYLE,
   chartColorAt,
@@ -30,6 +30,39 @@ const scatterRows = computed(() =>
 const hasData = computed(() =>
   scatterRows.value.some((r) => r.sampleCount > 0),
 );
+
+/** 用户点击/键盘选中的气泡说明 */
+const selectedDetail = ref<Record<number, string>>({});
+
+/** 格式化气泡明细文案 */
+function formatBubbleDetail(score: number, count: number, names: string): string {
+  return `${score} 分 · ${count} 人：${names}`;
+}
+
+/** 默认展示人数最多的气泡，无需悬停即可看到姓名 */
+function defaultBubbleDetail(row: SubjectScatterRow): string {
+  if (row.bubbles.length === 0) return '';
+  let top = row.bubbles[0]!;
+  for (const bubble of row.bubbles) {
+    if (bubble.count > top.count) top = bubble;
+  }
+  return formatBubbleDetail(top.score, top.count, top.names.join('、'));
+}
+
+/** 当前行应展示的明细 */
+function bubbleDetail(row: SubjectScatterRow): string {
+  return selectedDetail.value[row.subjectId] ?? defaultBubbleDetail(row);
+}
+
+/** 点击或键盘选中某一分数气泡 */
+function onBubbleSelect(row: SubjectScatterRow, payload: ChartSelectPayload): void {
+  const data = payload.data;
+  if (!Array.isArray(data) || data.length < 4) return;
+  selectedDetail.value = {
+    ...selectedDetail.value,
+    [row.subjectId]: formatBubbleDetail(Number(data[0]), Number(data[2]), String(data[3])),
+  };
+}
 
 /**
  * 单科横轴气泡图 option（软几何）。
@@ -137,8 +170,13 @@ function formatAvg(avg: number | null): string {
             v-if="row.sampleCount > 0"
             :option="rowOption(row, index)"
             height="64px"
+            :aria-label="`${row.subjectName}成绩分布`"
+            @select="(payload) => onBubbleSelect(row, payload)"
           />
           <div v-else class="score-scatter__empty-axis">本科目暂无计分</div>
+          <p v-if="row.sampleCount > 0" class="score-scatter__detail">
+            {{ bubbleDetail(row) }}
+          </p>
         </div>
       </div>
     </div>
@@ -210,5 +248,13 @@ function formatAvg(avg: number | null): string {
   padding-left: var(--cp-gap-4);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-3);
+}
+
+.score-scatter__detail {
+  margin: 0;
+  padding: var(--cp-gap-1) var(--cp-gap-3) var(--cp-gap-2);
+  font-size: var(--cp-font-xs);
+  color: var(--cp-text-2);
+  line-height: 1.45;
 }
 </style>

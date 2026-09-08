@@ -855,7 +855,7 @@ onMounted(() => {
         <div>
           <h3 class="cp-section-title">各科成绩气泡分布</h3>
           <p class="analysis__hint">
-            与上方同一考试：气泡位置=分数、大小=同分人数；悬停显示姓名；左侧红字为班均分
+            与上方同一考试：气泡位置=分数、大小=同分人数；点击或键盘查看姓名；左侧红字为班均分
           </p>
         </div>
         <div class="analysis__filters">

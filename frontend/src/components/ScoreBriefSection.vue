@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { EChartsOption } from 'echarts';
-import VChart from '@/components/VChart.vue';
+import VChart, { type ChartSelectPayload } from '@/components/VChart.vue';
 import type { ScoreBrief } from '@/api/dashboard';
 import {
   CHART_COLORS,
@@ -16,6 +16,8 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+/** 用户选中的趋势点下标；空则展示最近一场 */
+const selectedTrendIndex = ref<number | null>(null);
 
 /** 格式化考试日期 */
 function formatExamDate(iso: string | null): string {
@@ -96,6 +98,23 @@ const trendOption = computed<EChartsOption>(() => {
   };
 });
 
+/** 当前展示的趋势点说明（不依赖悬停） */
+const trendDetail = computed(() => {
+  const points = props.brief.totalTrend;
+  if (points.length === 0) return '';
+  const index = selectedTrendIndex.value ?? points.length - 1;
+  const point = points[index];
+  if (!point) return '';
+  const classText = point.classAvg !== null ? `班均 ${point.classAvg}` : '暂无班均';
+  const gradeText = point.gradeAvg !== null ? ` · 年级参考 ${point.gradeAvg}` : '';
+  return `${point.examName}：${classText}${gradeText}`;
+});
+
+/** 点击或键盘选中趋势点 */
+function onTrendSelect(payload: ChartSelectPayload): void {
+  selectedTrendIndex.value = payload.dataIndex;
+}
+
 /** 跳转分析中心 */
 function goAnalysis(): void {
   router.push('/analysis');
@@ -137,8 +156,14 @@ function formatLowRate(rate: number): string {
     <div class="score-brief__grid">
       <article class="score-brief__panel cp-card">
         <h3 class="score-brief__panel-title">班均总分趋势</h3>
-        <p class="score-brief__panel-hint">班整体在追吗</p>
-        <VChart :option="trendOption" height="240px" />
+        <p class="score-brief__panel-hint">班整体在追吗 · 点击或方向键查看各场明细</p>
+        <VChart
+          :option="trendOption"
+          height="240px"
+          aria-label="班均总分趋势图"
+          @select="onTrendSelect"
+        />
+        <p v-if="trendDetail" class="score-brief__chart-detail">{{ trendDetail }}</p>
       </article>
 
       <article class="score-brief__panel cp-card">
@@ -216,6 +241,13 @@ function formatLowRate(rate: number): string {
   margin: var(--cp-gap-1) 0 var(--cp-gap-3);
   font-size: var(--cp-font-xs);
   color: var(--cp-text-3);
+}
+
+.score-brief__chart-detail {
+  margin: var(--cp-gap-2) 0 0;
+  font-size: var(--cp-font-sm);
+  color: var(--cp-text-2);
+  font-variant-numeric: tabular-nums;
 }
 
 .score-brief__table-wrap {

@@ -80,11 +80,12 @@ export const CHART_STYLE = {
   praiseGradientStart: '#F8D48A',
 } as const;
 
-/** 统一 tooltip（白底、淡蓝边、圆角阴影） */
+/** 统一 tooltip（白底、淡蓝边、圆角阴影；默认支持悬停与点击，便于触摸） */
 export function chartTooltip(
   extra?: EChartsOption['tooltip'],
 ): EChartsOption['tooltip'] {
   return {
+    triggerOn: 'mousemove|click|mousewheel',
     backgroundColor: CHART_STYLE.tooltipBg,
     borderColor: CHART_STYLE.tooltipBorder,
     borderWidth: 1,

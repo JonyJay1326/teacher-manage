@@ -31,9 +31,23 @@ echarts.use([
   CanvasRenderer,
 ]);
 
+/** 图表选中（点击或键盘）载荷 */
+export interface ChartSelectPayload {
+  seriesIndex: number;
+  dataIndex: number;
+  data: unknown;
+  name: string;
+}
+
 const props = defineProps<{
   option: EChartsOption;
   height?: string;
+  /** 无障碍名称，供键盘用户识别图表 */
+  ariaLabel?: string;
+}>();
+
+const emit = defineEmits<{
+  select: [payload: ChartSelectPayload];
 }>();
 
 const chartRef = ref<HTMLDivElement | null>(null);
@@ -41,10 +55,81 @@ let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let resizeFrame: number | null = null;
 let disposed = false;
+let focusedDataIndex = 0;
 
 /** 容器是否已有有效宽高（隐藏 Tab 内常为 0） */
 function hasValidSize(el: HTMLElement): boolean {
   return el.clientWidth > 0 && el.clientHeight > 0;
+}
+
+/** 读取第一系列数据长度，供键盘切换 */
+function seriesDataLength(): number {
+  if (!chartInstance) return 0;
+  const option = chartInstance.getOption() as { series?: unknown };
+  const series = option.series;
+  const first = Array.isArray(series) ? series[0] : series;
+  if (!first || typeof first !== 'object') return 0;
+  const data = (first as { data?: unknown }).data;
+  return Array.isArray(data) ? data.length : 0;
+}
+
+/** 从 option 取出指定数据点并发出 select */
+function emitSelect(seriesIndex: number, dataIndex: number, fallbackData?: unknown, name = ''): void {
+  if (!chartInstance) return;
+  const option = chartInstance.getOption() as { series?: unknown };
+  const series = option.series;
+  const list = Array.isArray(series) ? series : [];
+  const target = list[seriesIndex];
+  const dataArr =
+    target && typeof target === 'object' && Array.isArray((target as { data?: unknown }).data)
+      ? (target as { data: unknown[] }).data
+      : [];
+  const data = fallbackData ?? dataArr[dataIndex];
+  emit('select', {
+    seriesIndex,
+    dataIndex,
+    data,
+    name,
+  });
+}
+
+/** 显示指定下标的 tooltip（循环） */
+function showTipAt(dataIndex: number): void {
+  const len = seriesDataLength();
+  if (!chartInstance || len === 0) return;
+  focusedDataIndex = ((dataIndex % len) + len) % len;
+  chartInstance.dispatchAction({
+    type: 'showTip',
+    seriesIndex: 0,
+    dataIndex: focusedDataIndex,
+  });
+  emitSelect(0, focusedDataIndex);
+}
+
+/** 点击数据点时同步选中态（触摸/鼠标均可） */
+function onChartClick(params: unknown): void {
+  if (typeof params !== 'object' || params === null) return;
+  const p = params as {
+    seriesIndex?: number;
+    dataIndex?: number;
+    data?: unknown;
+    name?: string;
+  };
+  if (typeof p.dataIndex !== 'number') return;
+  focusedDataIndex = p.dataIndex;
+  emitSelect(
+    p.seriesIndex ?? 0,
+    p.dataIndex,
+    p.data,
+    typeof p.name === 'string' ? p.name : '',
+  );
+}
+
+/** 绑定图表点击（init 后只需一次） */
+function bindInteraction(): void {
+  if (!chartInstance) return;
+  chartInstance.off('click', onChartClick);
+  chartInstance.on('click', onChartClick);
 }
 
 /** 初始化或在尺寸就绪后补 resize */
@@ -52,6 +137,7 @@ function initChart(): void {
   if (disposed || !chartRef.value || !hasValidSize(chartRef.value)) return;
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value);
+    bindInteraction();
   }
   chartInstance.setOption(props.option, true);
   chartInstance.resize();
@@ -83,6 +169,39 @@ function setupResizeObserver(): void {
   resizeObserver.observe(chartRef.value);
 }
 
+/** 键盘聚焦时展示当前数据点 tooltip */
+function handleFocus(): void {
+  showTipAt(focusedDataIndex);
+}
+
+/** 失焦时收起 tooltip */
+function handleBlur(): void {
+  chartInstance?.dispatchAction({ type: 'hideTip' });
+}
+
+/** 方向键切换数据点，Enter/空格再展示，Esc 关闭 */
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    showTipAt(focusedDataIndex + 1);
+    return;
+  }
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    showTipAt(focusedDataIndex - 1);
+    return;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    chartInstance?.dispatchAction({ type: 'hideTip' });
+    return;
+  }
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    showTipAt(focusedDataIndex);
+  }
+}
+
 watch(
   () => props.option,
   (newOption) => {
@@ -111,6 +230,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleWindowResize);
   resizeObserver?.disconnect();
   resizeObserver = null;
+  chartInstance?.off('click', onChartClick);
   chartInstance?.dispose();
   chartInstance = null;
 });
@@ -120,7 +240,12 @@ onUnmounted(() => {
   <div
     ref="chartRef"
     class="v-chart"
+    tabindex="0"
+    :aria-label="ariaLabel ?? '图表，点击或使用方向键查看数据点详情'"
     :style="{ width: '100%', height: height ?? '240px' }"
+    @focus="handleFocus"
+    @blur="handleBlur"
+    @keydown="handleKeydown"
   />
 </template>
 
@@ -128,5 +253,11 @@ onUnmounted(() => {
 .v-chart {
   min-width: 0;
   min-height: 120px;
+}
+
+.v-chart:focus-visible {
+  outline: 2px solid var(--cp-primary);
+  outline-offset: 2px;
+  border-radius: var(--cp-radius-ctl);
 }
 </style>

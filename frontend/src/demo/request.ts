@@ -157,7 +157,7 @@ function demoPlaceholders(
   if (scene === 'comment') {
     return [
       { key: 'student_name', label: '学生姓名', sample: '王浩然' },
-      { key: 'term', label: '学期名', sample: '2025-2026 第一学期' },
+      { key: 'term', label: '学期名', sample: '2026-2027 第一学期' },
       { key: 'style_tone', label: '语气', sample: '朴实' },
       { key: 'style_length', label: '篇幅', sample: '150-220字' },
       { key: 'style_advice', label: '是否含建议', sample: '是' },
@@ -183,7 +183,7 @@ function demoPlaceholders(
   }
   if (scene === 'work_summary') {
     return [
-      { key: 'term', label: '学期名', sample: '2025-2026 第一学期' },
+      { key: 'term', label: '学期名', sample: '2026-2027 第一学期' },
       { key: 'context', label: '班级数据', sample: '（考试趋势与管理概况）' },
     ];
   }
@@ -436,7 +436,7 @@ function dispatch(
       examType: String(b.examType ?? '测验'),
       examDate: String(b.examDate ?? new Date().toISOString()),
       subjectIds: Array.isArray(b.subjectIds) ? (b.subjectIds as number[]) : [],
-      status: 'open',
+      status: '未录入',
     };
     db.exams.unshift(exam);
     return exam;
@@ -1336,12 +1336,12 @@ function buildAnalysis(q: URLSearchParams): unknown {
     incidentMonthly: {
       months: 6,
       points: [
-        { month: '2025-09', count: 3 },
-        { month: '2025-10', count: 5 },
-        { month: '2025-11', count: 4 },
-        { month: '2025-12', count: 2 },
-        { month: '2026-01', count: 3 },
-        { month: '2026-02', count: 6 },
+        { month: '2026-06', count: 3 },
+        { month: '2026-07', count: 5 },
+        { month: '2026-08', count: 4 },
+        { month: '2026-09', count: 2 },
+        { month: '2026-10', count: 3 },
+        { month: '2026-11', count: 6 },
       ],
     },
   };

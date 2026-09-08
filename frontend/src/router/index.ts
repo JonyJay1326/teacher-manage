@@ -6,6 +6,7 @@ import {
   type Router,
 } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
+import LoginView from '@/views/auth/LoginView.vue';
 import { useAuthStore } from '@/stores/auth';
 import { activateDemoMode, deactivateDemoMode, isDemoMode } from '@/demo/mode';
 import {
@@ -119,7 +120,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'Login',
-      component: () => import('@/views/auth/LoginView.vue'),
+      component: LoginView,
       meta: { public: true },
     },
     {
