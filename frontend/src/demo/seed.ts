@@ -218,14 +218,14 @@ export function createDemoSeed(): DemoDb {
       {
         id: id * 10 + 1,
         type: 'score',
-        occurredAt: isoDate(2025, 11, 12),
+        occurredAt: isoDate(2026, 11, 12),
         title: '期中考试',
         summary: '总分班级中游，数学较上次提升',
       },
       {
         id: id * 10 + 2,
         type: 'contact',
-        occurredAt: isoDate(2025, 12, 5),
+        occurredAt: isoDate(2026, 10, 20),
         title: '家校沟通',
         summary: '反馈近期作业与作息情况',
       },
@@ -240,23 +240,23 @@ export function createDemoSeed(): DemoDb {
   const terms: TermDto[] = [
     {
       id: 1,
-      name: '2024-2025 学年第一学期',
-      startDate: '2024-09-01',
-      endDate: '2025-01-20',
+      name: '2025-2026 学年第一学期',
+      startDate: '2025-09-01',
+      endDate: '2026-01-20',
       grade: 10,
     },
     {
       id: 2,
-      name: '2024-2025 学年第二学期',
-      startDate: '2025-02-17',
-      endDate: '2025-07-05',
+      name: '2025-2026 学年第二学期',
+      startDate: '2026-02-17',
+      endDate: '2026-07-05',
       grade: 10,
     },
     {
       id: 3,
-      name: '2025-2026 学年第一学期',
-      startDate: '2025-09-01',
-      endDate: '2026-01-18',
+      name: '2026-2027 学年第一学期',
+      startDate: '2026-09-01',
+      endDate: '2027-01-18',
       grade: 11,
     },
   ];
@@ -267,33 +267,33 @@ export function createDemoSeed(): DemoDb {
       id: 1,
       name: '高一上学期期末',
       examType: '期末',
-      examDate: isoDate(2025, 1, 10),
+      examDate: isoDate(2026, 1, 10),
       subjectIds: [...subjectIds],
-      status: 'closed',
+      status: '已发布',
     },
     {
       id: 2,
       name: '高一下学期期中',
       examType: '期中',
-      examDate: isoDate(2025, 4, 18),
+      examDate: isoDate(2026, 4, 18),
       subjectIds: [...subjectIds],
-      status: 'closed',
+      status: '已发布',
     },
     {
       id: 3,
       name: '高一下学期期末',
       examType: '期末',
-      examDate: isoDate(2025, 6, 28),
+      examDate: isoDate(2026, 6, 28),
       subjectIds: [...subjectIds],
-      status: 'closed',
+      status: '已发布',
     },
     {
       id: 4,
       name: '高二上学期期中',
       examType: '期中',
-      examDate: isoDate(2025, 11, 12),
+      examDate: isoDate(2026, 11, 12),
       subjectIds: [...subjectIds],
-      status: 'open',
+      status: '录入中',
     },
   ];
 
@@ -370,7 +370,7 @@ export function createDemoSeed(): DemoDb {
 
   // 待跟进（首页待办）
   pushIncident({
-    occurredAt: isoDate(2026, 2, 20, 9, 30),
+    occurredAt: isoDate(2026, 11, 10, 9, 30),
     category: '情绪行为',
     severity: 2,
     title: '课间情绪失控，已安抚',
@@ -379,11 +379,11 @@ export function createDemoSeed(): DemoDb {
     studentIds: [4],
     followUpNeeded: true,
     followUpDone: false,
-    followUpDeadline: isoDate(2026, 2, 28),
+    followUpDeadline: isoDate(2026, 11, 20),
     status: 'confirmed',
   });
   pushIncident({
-    occurredAt: isoDate(2026, 2, 18, 14, 0),
+    occurredAt: isoDate(2026, 11, 8, 14, 0),
     category: '学习问题',
     severity: 2,
     title: '数学作业连续缺交',
@@ -391,11 +391,11 @@ export function createDemoSeed(): DemoDb {
     studentIds: [12],
     followUpNeeded: true,
     followUpDone: false,
-    followUpDeadline: isoDate(2026, 2, 25),
+    followUpDeadline: isoDate(2026, 11, 18),
     status: 'confirmed',
   });
   pushIncident({
-    occurredAt: isoDate(2026, 2, 10, 16, 20),
+    occurredAt: isoDate(2026, 11, 3, 16, 20),
     category: '家校沟通',
     severity: 1,
     title: '家长反馈睡眠不足',
@@ -403,13 +403,13 @@ export function createDemoSeed(): DemoDb {
     studentIds: [29],
     followUpNeeded: true,
     followUpDone: false,
-    followUpDeadline: isoDate(2026, 2, 22),
+    followUpDeadline: isoDate(2026, 11, 16),
     status: 'confirmed',
   });
 
   // 草稿
   pushIncident({
-    occurredAt: isoDate(2026, 3, 1, 8, 10),
+    occurredAt: isoDate(2026, 11, 16, 8, 10),
     category: '其他',
     severity: 1,
     title: '速记：走廊追逐',
@@ -421,7 +421,7 @@ export function createDemoSeed(): DemoDb {
     status: 'draft',
   });
   pushIncident({
-    occurredAt: isoDate(2026, 2, 27, 17, 40),
+    occurredAt: isoDate(2026, 11, 14, 17, 40),
     category: '表扬奖励',
     severity: 1,
     title: '速记：主动帮助同学',
@@ -438,7 +438,7 @@ export function createDemoSeed(): DemoDb {
     const sid = (i * 3) % 40 + 1;
     const cat = categories[i % categories.length]!;
     pushIncident({
-      occurredAt: isoDate(2025, 10 + (i % 5), 5 + i, 10, 0),
+      occurredAt: isoDate(2026, 6 + (i % 5), 5 + i, 10, 0),
       category: cat,
       severity: ((i % 3) + 1) as 1 | 2 | 3,
       title: `${cat}记录 #${i + 1}`,
@@ -446,8 +446,8 @@ export function createDemoSeed(): DemoDb {
       studentIds: [sid],
       followUpNeeded: i % 4 === 0,
       followUpDone: i % 4 === 0,
-      followUpDeadline: i % 4 === 0 ? isoDate(2025, 11, 1) : undefined,
-      followUpDoneAt: i % 4 === 0 ? isoDate(2025, 10, 28) : null,
+      followUpDeadline: i % 4 === 0 ? isoDate(2026, 11, 1) : undefined,
+      followUpDoneAt: i % 4 === 0 ? isoDate(2026, 10, 28) : null,
       followUpResult: i % 4 === 0 ? '已与家长电话沟通，情况稳定。' : null,
       status: 'confirmed',
     });
@@ -460,7 +460,7 @@ export function createDemoSeed(): DemoDb {
     commentType: '期中评语',
     finalText: `${s.name}同学本期学习态度端正，课堂发言积极。建议继续保持复习节奏，薄弱科目可制定每周小目标。`,
     sourceAiRecordId: null,
-    createdAt: isoDate(2025, 11, 20),
+    createdAt: isoDate(2026, 11, 15),
   }));
 
   const prompts: AiPromptDto[] = [
@@ -643,20 +643,20 @@ export function createDemoSeed(): DemoDb {
       tokensIn: 820,
       tokensOut: 260,
       status: 'success',
-      createdAt: isoDate(2025, 11, 19),
+      createdAt: isoDate(2026, 11, 16),
     },
   ];
 
   const kbDocuments: KbDocumentDto[] = [
     {
       id: 1,
-      title: '班级公约（2025）',
+      title: '班级公约（2026）',
       categoryPath: '班级管理/公约',
       source: 'paste',
       filePath: null,
       segCount: 4,
       tags: ['公约', '日常'],
-      createdAt: isoDate(2025, 9, 5),
+      createdAt: isoDate(2026, 9, 5),
       preview: '按时到校、尊重师长、课堂专注、互助友善……',
     },
     {
@@ -667,7 +667,7 @@ export function createDemoSeed(): DemoDb {
       filePath: null,
       segCount: 6,
       tags: ['家长会'],
-      createdAt: isoDate(2025, 10, 12),
+      createdAt: isoDate(2026, 10, 12),
       preview: '本期学情综述、重点关注学生沟通要点、寒假建议……',
     },
   ];

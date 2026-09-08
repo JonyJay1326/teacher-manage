@@ -1,0 +1,48 @@
+@import './tokens.css';
+
+/**
+ * 首屏加载态：由 index.html 在 Vue 挂载前同步引入，
+ * 与 App.vue 路由就绪前的覆盖层共用同一套 --cp-* / Element 令牌。
+ */
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--cp-bg-page);
+}
+
+.app-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cp-gap-3);
+  min-height: 100vh;
+  background: var(--cp-bg-page);
+  color: var(--cp-text-3);
+  font-size: var(--cp-font-sm);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+
+.app-boot__spinner {
+  width: var(--el-component-size-small);
+  height: var(--el-component-size-small);
+  border: var(--cp-gap-1) solid var(--cp-primary-bg);
+  border-top-color: var(--cp-primary);
+  border-radius: var(--cp-radius-round);
+  animation: app-boot-spin 0.7s linear infinite;
+}
+
+.app-boot__text {
+  margin: 0;
+}
+
+@keyframes app-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

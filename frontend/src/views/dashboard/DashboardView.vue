@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { EditPen, Hide } from '@element-plus/icons-vue';
+import { EditPen, Hide, View } from '@element-plus/icons-vue';
 import { ApiError } from '@/api/http';
 import { dashboardHomeApi, type ScoreBrief } from '@/api/dashboard';
 import WeeklyScheduleCard from '@/components/WeeklyScheduleCard.vue';
@@ -18,6 +18,21 @@ const dueFollowUps = ref<IncidentListItem[]>([]);
 const recentDrafts = ref<IncidentListItem[]>([]);
 const scoreBrief = ref<ScoreBrief | null>(null);
 const loading = ref(false);
+/** 已展开近况摘要的学生 id（点击/键盘揭示，避免仅悬停） */
+const revealedSummaryIds = ref<Set<number>>(new Set());
+
+/** 近况摘要是否已展开 */
+function isSummaryRevealed(id: number): boolean {
+  return revealedSummaryIds.value.has(id);
+}
+
+/** 切换近况摘要显隐 */
+function toggleSummary(id: number): void {
+  const next = new Set(revealedSummaryIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  revealedSummaryIds.value = next;
+}
 
 /** 关注等级标签文字 */
 function focusLevelLabel(level: number): string {
@@ -186,20 +201,21 @@ onMounted(() => {
                   </el-tag>
                 </div>
               </div>
-              <el-tooltip
+              <button
                 v-if="student.lastIncidentSummary"
-                :content="student.lastIncidentSummary"
-                placement="top"
-                effect="light"
-                :show-after="280"
-                :hide-after="0"
-                popper-class="focus-card__summary-popper"
+                type="button"
+                class="focus-card__summary"
+                :class="{ 'focus-card__summary--masked': !isSummaryRevealed(student.id) }"
+                :aria-expanded="isSummaryRevealed(student.id)"
+                @click.stop="toggleSummary(student.id)"
               >
-                <p class="focus-card__summary focus-card__summary--masked" @click.stop>
-                  <el-icon class="focus-card__summary-icon"><Hide /></el-icon>
-                  <span>悬停查看近况</span>
-                </p>
-              </el-tooltip>
+                <el-icon class="focus-card__summary-icon">
+                  <View v-if="isSummaryRevealed(student.id)" />
+                  <Hide v-else />
+                </el-icon>
+                <span v-if="!isSummaryRevealed(student.id)">点击查看近况</span>
+                <span v-else>{{ student.lastIncidentSummary }}</span>
+              </button>
               <div v-if="student.daysSinceLastContact !== undefined" class="focus-card__contact">
                 沟通 {{ student.daysSinceLastContact }} 天前
               </div>
@@ -329,25 +345,34 @@ onMounted(() => {
   color: var(--cp-text-1);
 }
 
+/* 近况摘要默认脱敏：点击或键盘展开全文，降低被旁人瞥见的风险 */
 .focus-card__summary {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--cp-gap-compact);
+  max-width: 100%;
   margin: 0 0 var(--cp-gap-2);
+  padding: var(--cp-gap-1) var(--cp-gap-2);
+  border: 1px dashed transparent;
+  border-radius: var(--cp-radius-ctl);
+  background: transparent;
+  font: inherit;
   font-size: var(--cp-font-sm);
   color: var(--cp-text-3);
   line-height: 1.55;
+  text-align: left;
+  cursor: pointer;
 }
 
-/* 近况摘要默认脱敏：仅悬停 tooltip 展示全文，降低被旁人瞥见的风险 */
 .focus-card__summary--masked {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cp-gap-compact);
-  max-width: 100%;
-  padding: var(--cp-gap-1) var(--cp-gap-2);
-  border-radius: var(--cp-radius-ctl);
   background: var(--cp-bg-page);
-  border: 1px dashed var(--cp-divider);
-  cursor: help;
+  border-color: var(--cp-divider);
   user-select: none;
+}
+
+.focus-card__summary:focus-visible {
+  outline: 2px solid var(--cp-primary);
+  outline-offset: 2px;
 }
 
 .focus-card__summary-icon {
@@ -465,26 +490,5 @@ onMounted(() => {
 
 .todo-item__draft-link:hover {
   text-decoration: underline;
-}
-</style>
-
-<style>
-/* tooltip 挂到 body，需非 scoped；白色气泡与设计令牌对齐 */
-.focus-card__summary-popper.el-popper {
-  max-width: 320px;
-  padding: var(--cp-gap-3) var(--cp-gap-3);
-  border-radius: var(--cp-radius-card);
-  border: 1px solid var(--cp-border);
-  background: var(--cp-bg-card);
-  color: var(--cp-text-1);
-  font-size: var(--cp-font-sm);
-  line-height: 1.6;
-  word-break: break-word;
-  box-shadow: var(--cp-shadow-2);
-}
-
-.focus-card__summary-popper .el-popper__arrow::before {
-  border: 1px solid var(--cp-border);
-  background: var(--cp-bg-card);
 }
 </style>

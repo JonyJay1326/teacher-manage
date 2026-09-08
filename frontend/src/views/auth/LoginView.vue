@@ -73,7 +73,7 @@ async function handleLogin(): Promise<void> {
           </el-button>
         </el-form-item>
       </el-form>
-      <p class="login-card__hint">请使用 cli:create-user 创建的账号登录</p>
+      <p class="login-card__hint">如需账号，请联系系统管理员开通</p>
       <p class="login-card__demo">
         <router-link to="/demo">进入演示模式</router-link>
         <span>（业务 Mock；AI 调 DeepSeek 需先登录）</span>

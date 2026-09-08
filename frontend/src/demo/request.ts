@@ -1,6 +1,7 @@
 import { ApiError } from '@/api/http';
 import type { Student } from '@/types';
 import { tryHandleDemoAi } from './aiGenerate';
+import { getDemoToday } from './calendar';
 import { buildDemoCommentContext } from './commentContext';
 import { allocDemoId, getDemoDb, resetDemoDb } from './db';
 import { buildExamMatrix } from './seed';
@@ -157,7 +158,7 @@ function demoPlaceholders(
   if (scene === 'comment') {
     return [
       { key: 'student_name', label: '学生姓名', sample: '王浩然' },
-      { key: 'term', label: '学期名', sample: '2025-2026 第一学期' },
+      { key: 'term', label: '学期名', sample: '2026-2027 第一学期' },
       { key: 'style_tone', label: '语气', sample: '朴实' },
       { key: 'style_length', label: '篇幅', sample: '150-220字' },
       { key: 'style_advice', label: '是否含建议', sample: '是' },
@@ -183,7 +184,7 @@ function demoPlaceholders(
   }
   if (scene === 'work_summary') {
     return [
-      { key: 'term', label: '学期名', sample: '2025-2026 第一学期' },
+      { key: 'term', label: '学期名', sample: '2026-2027 第一学期' },
       { key: 'context', label: '班级数据', sample: '（考试趋势与管理概况）' },
     ];
   }
@@ -436,7 +437,7 @@ function dispatch(
       examType: String(b.examType ?? '测验'),
       examDate: String(b.examDate ?? new Date().toISOString()),
       subjectIds: Array.isArray(b.subjectIds) ? (b.subjectIds as number[]) : [],
-      status: 'open',
+      status: '未录入',
     };
     db.exams.unshift(exam);
     return exam;
@@ -1146,6 +1147,40 @@ function buildDashboardHome(): unknown {
   };
 }
 
+/** 本地日历日格式化为 YYYY-MM-DD */
+function formatLocalYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** 演示沟通热力：以演示「今天」为终点的最近 N 天 */
+function buildDemoContactHeatmap(days: number): {
+  days: number;
+  rangeStart: string;
+  rangeEnd: string;
+  cells: Array<[string, number]>;
+  maxCount: number;
+} {
+  const end = getDemoToday();
+  const start = new Date(end.getTime());
+  start.setDate(start.getDate() - (days - 1));
+  const cells: Array<[string, number]> = [];
+  for (let i = 0; i < days; i += 1) {
+    const day = new Date(start.getTime());
+    day.setDate(start.getDate() + i);
+    cells.push([formatLocalYmd(day), Math.floor(Math.random() * 4)]);
+  }
+  return {
+    days,
+    rangeStart: formatLocalYmd(start),
+    rangeEnd: formatLocalYmd(end),
+    cells,
+    maxCount: 4,
+  };
+}
+
 /** 分析中心 */
 function buildAnalysis(q: URLSearchParams): unknown {
   const db = getDemoDb();
@@ -1306,16 +1341,7 @@ function buildAnalysis(q: URLSearchParams): unknown {
       decline: decline.slice(0, 8),
     },
     focusFrequency: { days: 90, items: focusFrequency },
-    contactHeatmap: {
-      days: 28,
-      rangeStart: '2026-02-01',
-      rangeEnd: '2026-02-28',
-      cells: Array.from({ length: 28 }, (_, i) => [
-        `2026-02-${String(i + 1).padStart(2, '0')}`,
-        Math.floor(Math.random() * 4),
-      ]),
-      maxCount: 4,
-    },
+    contactHeatmap: buildDemoContactHeatmap(28),
     categoryDistribution: {
       termId: db.terms[db.terms.length - 1]?.id ?? null,
       termName: db.terms[db.terms.length - 1]?.name ?? null,
@@ -1336,12 +1362,12 @@ function buildAnalysis(q: URLSearchParams): unknown {
     incidentMonthly: {
       months: 6,
       points: [
-        { month: '2025-09', count: 3 },
-        { month: '2025-10', count: 5 },
-        { month: '2025-11', count: 4 },
-        { month: '2025-12', count: 2 },
-        { month: '2026-01', count: 3 },
-        { month: '2026-02', count: 6 },
+        { month: '2026-06', count: 3 },
+        { month: '2026-07', count: 5 },
+        { month: '2026-08', count: 4 },
+        { month: '2026-09', count: 2 },
+        { month: '2026-10', count: 3 },
+        { month: '2026-11', count: 6 },
       ],
     },
   };

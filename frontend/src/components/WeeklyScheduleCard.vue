@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { isDemoMode } from '@/demo/mode';
+import { getDemoToday } from '@/demo/calendar';
 import {
   SCHEDULE_ROWS,
   SCHEDULE_WEEKDAYS,
@@ -19,20 +21,24 @@ withDefaults(
   { compact: false },
 );
 
-const todayCol = scheduleDayIndex();
+/** 演示模式用种子日历「今天」，正式环境用真实日期 */
+const todayCol = computed(() =>
+  scheduleDayIndex(isDemoMode() ? getDemoToday() : new Date()),
+);
 
+/** 今日星期文案 */
 const todayLabel = computed(() => {
-  if (todayCol < 0) return '周末休息';
-  return `星期${SCHEDULE_WEEKDAYS[todayCol]}`;
+  if (todayCol.value < 0) return '周末休息';
+  return `星期${SCHEDULE_WEEKDAYS[todayCol.value]}`;
 });
 
 /** 今日有课列表 */
 const todayLessons = computed(() => {
-  if (todayCol < 0) return [] as Array<{ slot: string; cell: ScheduleCell }>;
+  if (todayCol.value < 0) return [] as Array<{ slot: string; cell: ScheduleCell }>;
   const list: Array<{ slot: string; cell: ScheduleCell }> = [];
   SCHEDULE_ROWS.forEach((row, i) => {
     if (row.fullSpanText) return;
-    const cell = WEEKLY_SCHEDULE[i]?.[todayCol] ?? null;
+    const cell = WEEKLY_SCHEDULE[i]?.[todayCol.value] ?? null;
     if (cell) list.push({ slot: scheduleSlotLabel(row), cell });
   });
   return list;
@@ -51,7 +57,7 @@ function cellClass(cell: ScheduleCell | null, dayIndex: number): string[] {
     return classes;
   }
   classes.push(`tt-cell--${scheduleKindOf(cell.subject)}`);
-  if (dayIndex === todayCol) classes.push('tt-cell--today');
+  if (dayIndex === todayCol.value) classes.push('tt-cell--today');
   return classes;
 }
 

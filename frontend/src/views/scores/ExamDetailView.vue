@@ -6,6 +6,7 @@ import { ApiError } from '@/api/http';
 import { getExamApi, getExamMatrixApi } from '@/api/scores';
 import SubjectScoreScatter from '@/components/SubjectScoreScatter.vue';
 import type { Exam, ExamScoreRow, Subject, SubjectScoreCell } from '@/types';
+import { examStatusLabel } from '@/utils/examStatus';
 
 const route = useRoute();
 const router = useRouter();
@@ -143,7 +144,7 @@ onMounted(() => {
       <div>
         <h2 class="cp-page-header__title">{{ exam?.name ?? '考试详情' }}</h2>
         <p class="cp-page-header__desc">
-          {{ exam?.examType }} · {{ formatExamDate(exam?.examDate) }} · {{ exam?.status }}
+          {{ exam?.examType }} · {{ formatExamDate(exam?.examDate) }} · {{ exam ? examStatusLabel(exam.status) : '' }}
         </p>
       </div>
       <div class="exam-detail__actions">
@@ -155,7 +156,7 @@ onMounted(() => {
 
     <div class="cp-card cp-content-card exam-detail__scatter-card">
       <div class="exam-detail__table-hint">
-        各科成绩分布 · 气泡位置为分数，大小为同分人数 · 悬停查看姓名 · 左侧红字为班均分
+        各科成绩分布 · 气泡位置为分数，大小为同分人数 · 点击或键盘查看姓名 · 左侧红字为班均分
       </div>
       <SubjectScoreScatter :subjects="subjects" :rows="scoreRows" />
     </div>

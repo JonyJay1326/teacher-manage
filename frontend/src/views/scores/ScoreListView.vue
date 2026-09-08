@@ -10,6 +10,7 @@ import {
   listTermsApi,
 } from '@/api/scores';
 import type { Exam, Subject } from '@/types';
+import { examStatusLabel, examStatusTagType } from '@/utils/examStatus';
 
 const router = useRouter();
 
@@ -111,7 +112,7 @@ function goEntry(examId: number): void {
 
 /** 已发布考试数（统计条） */
 const publishedCount = computed(
-  () => exams.value.filter((exam) => exam.status === '已发布').length,
+  () => exams.value.filter((exam) => examStatusLabel(exam.status) === '已发布').length,
 );
 
 /** 最近一次考试（按考试日期倒序第一条） */
@@ -122,13 +123,7 @@ const latestExam = computed<Exam | null>(() => {
 
 /** 状态标签类型 */
 function statusType(status: string): 'info' | 'warning' | 'success' | undefined {
-  const map: Record<string, 'info' | 'warning' | 'success' | undefined> = {
-    未录入: 'info',
-    录入中: 'warning',
-    已发布: 'success',
-    已归档: undefined,
-  };
-  return map[status];
+  return examStatusTagType(status);
 }
 
 /** 考试日期展示到日（YYYY-MM-DD） */
@@ -188,7 +183,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="status" label="状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="default">{{ row.status }}</el-tag>
+            <el-tag :type="statusType(row.status)" size="default">{{ examStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" align="center" header-align="center">

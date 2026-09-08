@@ -5,9 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=1200" />
     <title>ClassPilot 班级领航员</title>
+    <!-- 令牌 + 首屏加载态：阻塞渲染，避免 JS 完成前白屏或硬编码色值 -->
+    <link rel="stylesheet" href="/src/styles/boot.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="app-boot" role="status" aria-live="polite" aria-busy="true">
+        <div class="app-boot__spinner" aria-hidden="true"></div>
+        <p class="app-boot__text">加载中…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
