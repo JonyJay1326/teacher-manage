@@ -102,9 +102,7 @@ onMounted(() => {
               <h2 class="cp-page-header__title">待办跟进</h2>
               <p class="cp-page-header__desc">到期未完成与速记草稿</p>
             </div>
-            <router-link to="/incidents">
-              <el-button text type="primary">全部</el-button>
-            </router-link>
+            <router-link to="/incidents" class="cp-text-link">全部</router-link>
           </div>
           <el-card
             shadow="never"
@@ -164,9 +162,7 @@ onMounted(() => {
               <h2 class="cp-page-header__title">重点关注</h2>
               <p class="cp-page-header__desc">focus_level ≥ 2</p>
             </div>
-            <router-link to="/students">
-              <el-button text type="primary">花名册</el-button>
-            </router-link>
+            <router-link to="/students" class="cp-text-link">花名册</router-link>
           </div>
           <div v-if="focusStudents.length === 0" class="cp-card dashboard__empty">
             <el-empty description="暂无重点关注学生" :image-size="56" />

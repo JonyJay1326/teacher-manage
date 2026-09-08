@@ -53,18 +53,6 @@ body {
   margin-bottom: var(--cp-gap-5);
 }
 
-.cp-page-header > a {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  color: inherit;
-  text-decoration: none;
-}
-
-.cp-page-header > a:hover {
-  color: inherit;
-}
-
 .cp-page-header__title {
   margin: 0;
   font-size: var(--cp-font-lg);
@@ -198,6 +186,56 @@ body {
   height: auto;
   min-height: 0;
   padding: var(--cp-gap-half) var(--cp-gap-compact);
+  border-radius: var(--cp-radius-ctl);
+  /* 统一文字/链接按钮 hover：浅蓝底 + 主色字 */
+  --el-button-bg-color: transparent;
+  --el-button-hover-bg-color: var(--cp-primary-bg);
+  --el-button-hover-text-color: var(--cp-primary);
+  --el-button-active-bg-color: var(--cp-primary-bg-strong);
+  --el-button-active-text-color: var(--cp-primary-active);
+}
+
+.el-button.is-text.el-button--danger,
+.el-button.is-link.el-button--danger {
+  --el-button-hover-bg-color: var(--cp-danger-bg);
+  --el-button-hover-text-color: var(--cp-danger);
+  --el-button-active-bg-color: var(--cp-danger-bg);
+  --el-button-active-text-color: var(--cp-danger);
+}
+
+.el-button.is-text.el-button--warning,
+.el-button.is-link.el-button--warning {
+  --el-button-hover-bg-color: var(--cp-warning-bg);
+  --el-button-hover-text-color: var(--cp-warning);
+  --el-button-active-bg-color: var(--cp-warning-bg);
+  --el-button-active-text-color: var(--cp-warning);
+}
+
+/* 页头右侧文字链（router-link），与 text/link 按钮同档 hover */
+.cp-page-header > a,
+a.cp-text-link {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: var(--cp-gap-half) var(--cp-gap-compact);
+  border-radius: var(--cp-radius-ctl);
+  color: var(--cp-primary);
+  font-size: var(--cp-font-base);
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cp-page-header > a:hover,
+.cp-page-header > a:focus-visible,
+a.cp-text-link:hover,
+a.cp-text-link:focus-visible {
+  background: var(--cp-primary-bg);
+  color: var(--cp-primary-hover);
+  outline: none;
 }
 
 .el-button > span {
