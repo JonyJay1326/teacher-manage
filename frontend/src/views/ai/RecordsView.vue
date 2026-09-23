@@ -121,11 +121,11 @@ onMounted(() => {
         <template #empty>
           <el-empty description="暂无匹配生成记录，可调整筛选条件" :image-size="72"></el-empty>
         </template>
-        <el-table-column prop="id" label="ID" width="72" />
-        <el-table-column label="场景" min-width="120">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column label="场景" min-width="90">
           <template #default="{ row }">{{ sceneLabel(row.scene) }}</template>
         </el-table-column>
-        <el-table-column label="学生" min-width="120">
+        <el-table-column label="学生" min-width="100">
           <template #default="{ row }">
             <el-button
               v-if="row.studentId"
@@ -138,16 +138,16 @@ onMounted(() => {
             <span v-else>—</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" min-width="100">
+        <el-table-column label="状态" min-width="90">
           <template #default="{ row }">{{ statusLabel(row.status) }}</template>
         </el-table-column>
-        <el-table-column prop="model" label="模型" min-width="140" />
-        <el-table-column label="tokens" min-width="120">
+        <el-table-column prop="model" label="模型" min-width="130" />
+        <el-table-column label="tokens" min-width="90">
           <template #default="{ row }">
             {{ row.tokensIn ?? 0 }} / {{ row.tokensOut ?? 0 }}
           </template>
         </el-table-column>
-        <el-table-column label="时间" min-width="180">
+        <el-table-column label="时间" min-width="170">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="90" fixed="right">

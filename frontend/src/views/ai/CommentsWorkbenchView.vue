@@ -518,7 +518,7 @@ function openStudent(): void {
           v-model="promptId"
           placeholder="模板"
           clearable
-          style="width: 160px"
+          style="width: 200px"
           @change="onPromptChange"
         >
           <el-option
@@ -712,7 +712,8 @@ function openStudent(): void {
 
 .comments-wb__main {
   display: grid;
-  grid-template-columns: minmax(220px, 0.85fr) minmax(360px, 1.65fr) minmax(200px, 0.8fr);
+  /* 左侧学生列表最小宽度需容纳「学号+姓名+状态」三段，避免姓名被压成省略号 */
+  grid-template-columns: minmax(252px, 0.85fr) minmax(360px, 1.65fr) minmax(200px, 0.8fr);
   gap: var(--cp-gap-4);
   min-height: 560px;
   align-items: stretch;
@@ -774,7 +775,7 @@ function openStudent(): void {
 
 .comments-wb__item {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 52px;
+  grid-template-columns: 64px minmax(0, 1fr) 52px;
   align-items: center;
   column-gap: var(--cp-gap-2);
   width: 100%;

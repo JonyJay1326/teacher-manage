@@ -1325,7 +1325,7 @@ watch(activeTab, (tab) => {
                   <el-option
                     v-for="exam in scoreExamList"
                     :key="exam.id"
-                    :label="`${exam.name}（${exam.examDate}）`"
+                    :label="`${exam.name}（${exam.examDate.slice(0, 10)}）`"
                     :value="exam.id"
                   />
                 </el-select>
