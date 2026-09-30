@@ -3,15 +3,12 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ApiError } from '@/api/http';
-import {
-  createExamApi,
-  listExamsApi,
-  listSubjectsApi,
-  listTermsApi,
-} from '@/api/scores';
+import { createExamApi } from '@/api/scores';
 import type { Exam, Subject } from '@/types';
+import { useScoresStore } from '@/stores/scores';
 
 const router = useRouter();
+const scoresStore = useScoresStore();
 
 const exams = ref<Exam[]>([]);
 const subjects = ref<Subject[]>([]);
@@ -37,14 +34,15 @@ const examTypeOptions = ['月考', '期中', '期末', '周测', '其他'] as co
 async function loadData(): Promise<void> {
   loading.value = true;
   try {
-    const [examList, subjectList, termList] = await Promise.all([
-      listExamsApi(),
-      listSubjectsApi(),
-      listTermsApi(),
+    // 考试/科目/学期统一来自 scores store；本页可能刚新建考试，故强制刷新考试列表
+    await Promise.all([
+      scoresStore.loadExams(true),
+      scoresStore.loadSubjects(),
+      scoresStore.loadTerms(),
     ]);
-    exams.value = examList;
-    subjects.value = subjectList;
-    defaultTermId.value = termList[0]?.id ?? null;
+    exams.value = scoresStore.exams;
+    subjects.value = scoresStore.subjects;
+    defaultTermId.value = scoresStore.terms[0]?.id ?? null;
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '加载考试列表失败');
   } finally {
