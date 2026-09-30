@@ -158,16 +158,20 @@ export const useScoresStore = defineStore('scores', () => {
   /** 考试列表（按日期倒序） */
   const sortedExams = computed(() => sortExamsByDateDesc(exams.value));
 
-  /** 加载考试列表（已加载时不重复请求） */
+  /**
+   * 加载考试列表。
+   * 已选中且仍存在的考试会被保留（用户手选的考试不应被刷新打回最新一场）；
+   * 仅当没有选中、或选中的已删除时，才回落到最近一场。
+   */
   async function loadExams(force = false): Promise<void> {
     if (!force && exams.value.length > 0) return;
     examsLoading.value = true;
     try {
       exams.value = await listExamsApi();
-      if (
-        selectedExamId.value === null
-        || !exams.value.some((e) => e.id === selectedExamId.value)
-      ) {
+      const current = selectedExamId.value;
+      const keepCurrent =
+        current !== null && exams.value.some((e) => e.id === current);
+      if (!keepCurrent) {
         const first = sortExamsByDateDesc(exams.value)[0];
         selectedExamId.value = first ? first.id : null;
       }
