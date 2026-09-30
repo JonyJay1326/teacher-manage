@@ -12,6 +12,13 @@ class RestoreBackupDto {
   confirm!: boolean;
 }
 
+/** 校验备份 DTO */
+class VerifyBackupDto {
+  @IsString()
+  @MinLength(1)
+  filename!: string;
+}
+
 /** 备份手动触发（需登录） */
 @Controller('v1/backup')
 export class BackupController {
@@ -27,6 +34,12 @@ export class BackupController {
   @Get('list')
   list() {
     return this.backupService.listBackups();
+  }
+
+  /** 校验单个备份完整性（integrity_check + sha256） */
+  @Post('verify')
+  verify(@Body() dto: VerifyBackupDto) {
+    return this.backupService.verify(dto.filename);
   }
 
   /** 从备份恢复（先自动备份当前库） */
