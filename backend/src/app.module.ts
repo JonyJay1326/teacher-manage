@@ -16,6 +16,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { RecycleModule } from './modules/recycle/recycle.module';
+import { ExportModule } from './modules/export/export.module';
 import { GlobalAuthGuard } from './common/global-auth.guard';
 
 /** 应用根模块 */
@@ -36,6 +37,7 @@ import { GlobalAuthGuard } from './common/global-auth.guard';
     SettingsModule,
     KnowledgeModule,
     RecycleModule,
+    ExportModule,
   ],
   controllers: [HealthController],
   providers: [

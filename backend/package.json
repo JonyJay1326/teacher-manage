@@ -9,7 +9,9 @@
     "cli:create-user": "node dist/cli/create-user.js",
     "cli:create-user:dev": "ts-node src/cli/create-user.ts",
     "cli:seed-mock": "ts-node src/cli/seed-mock.ts",
-    "cli:seed-mock:reset": "ts-node src/cli/seed-mock.ts --reset"
+    "cli:seed-mock:reset": "ts-node src/cli/seed-mock.ts --reset",
+    "cli:smoke-q1-backup": "ts-node src/cli/smoke-q1-backup.ts",
+    "cli:smoke-q1-export": "ts-node src/cli/smoke-q1-export.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
