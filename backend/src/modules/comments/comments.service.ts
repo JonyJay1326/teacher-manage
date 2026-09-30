@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, MessageEvent } from '@nestjs/common';
+import { Observable, from } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AppException, ErrorCodes } from '../../common/api';
 import { AiRepository } from '../ai/ai.repository';
 import { CommentContextService } from '../ai/comment-context.service';
@@ -7,6 +9,7 @@ import type {
   AdoptCommentDto,
   CreateCommentDto,
   GenerateCommentDto,
+  StreamCommentDto,
 } from './comments.dto';
 import { CommentsRepository } from './comments.repository';
 
@@ -136,6 +139,28 @@ export class CommentsService {
     };
   }
 
+
+  /**
+   * 流式生成评语：返回 Observable（由控制器 @Sse 包装）。
+   * 事件序列：meta → (delta)* → done
+   */
+  streamGenerate(dto: StreamCommentDto): Observable<MessageEvent> {
+    return from(
+      this.commentGenerateService.generateStream(
+        {
+          studentId: dto.studentId,
+          termId: dto.termId ?? null,
+          commentType: dto.commentType,
+          tone: dto.tone,
+          length: dto.length,
+          includeAdvice: dto.includeAdvice,
+          promptId: dto.promptId ?? null,
+        },
+        dto.continueFrom,
+      ),
+    );
+  }
+
   /** 生成草稿 */
   async generate(dto: GenerateCommentDto) {
     if (!this.commentsRepository.studentExists(dto.studentId)) {
@@ -153,6 +178,16 @@ export class CommentsService {
       includeAdvice: dto.includeAdvice,
       promptId: dto.promptId ?? null,
     });
+  }
+
+  /** 学生是否存在（流式端点前置校验） */
+  studentExists(studentId: number): boolean {
+    return this.commentsRepository.studentExists(studentId);
+  }
+
+  /** 学期是否存在（流式端点前置校验） */
+  termExists(termId: number): boolean {
+    return this.commentsRepository.termExists(termId);
   }
 
   /** 采纳写入 comments */
