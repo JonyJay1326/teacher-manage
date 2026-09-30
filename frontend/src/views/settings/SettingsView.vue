@@ -18,6 +18,8 @@ import {
   type BackupItemDto,
   type ThresholdsDto,
 } from '@/api/settings';
+import { exportScoreCardsZip } from '@/api/reports';
+import { isDemoMode } from '@/demo/mode';
 
 const router = useRouter();
 const activeTab = ref('thresholds');
@@ -47,6 +49,7 @@ const backupListing = ref(false);
 const restoreLoading = ref('');
 const verifyLoading = ref('');
 const exportLoading = ref(false);
+const reportLoading = ref(false);
 
 const aiHealth = ref<AiHealthView | null>(null);
 
@@ -277,6 +280,23 @@ async function handleExportExcel(): Promise<void> {
     ElMessage.error(err instanceof ApiError ? err.message : '导出失败');
   } finally {
     exportLoading.value = false;
+  }
+}
+
+/** 一键批量导出家长成绩单 PDF（打包 zip） */
+async function handleExportScoreCards(): Promise<void> {
+  if (isDemoMode()) {
+    ElMessage.info('演示模式不生成 PDF，请退出演示后重试');
+    return;
+  }
+  reportLoading.value = true;
+  try {
+    const res = await exportScoreCardsZip();
+    ElMessage.success(`已导出 ${res.filename}（${formatSize(res.size)}）`);
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof Error ? err.message : '成绩单导出失败');
+  } finally {
+    reportLoading.value = false;
   }
 }
 
@@ -547,8 +567,17 @@ onMounted(() => {
               >
                 导出 Excel
               </el-button>
+              <el-button
+                :loading="reportLoading"
+                @click="handleExportScoreCards"
+              >
+                导出成绩单 PDF
+              </el-button>
             </div>
           </div>
+          <p class="settings__hint settings__hint--tight">
+            成绩单为「每个学生一份 PDF、只含本人数据」，一键打包为 zip；取最近一场已录成绩的考试。
+          </p>
         </div>
       </el-tab-pane>
 
@@ -646,6 +675,10 @@ onMounted(() => {
   margin: var(--cp-gap-2) 0 var(--cp-gap-4);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-2);
+}
+
+.settings__hint--tight {
+  margin: var(--cp-gap-3) 0 0;
 }
 
 .settings__form {
