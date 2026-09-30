@@ -1,11 +1,13 @@
 <script setup lang="ts">
 	import { computed, onMounted, ref, watch } from 'vue'
+	import { storeToRefs } from 'pinia'
 	import { useRouter } from 'vue-router'
 	import { ElMessage, ElMessageBox } from 'element-plus'
 	import { ApiError } from '@/api/http'
-	import { createStudentApi, createTagApi, deleteStudentApi, importConfirmApi, importPreviewApi, listStudentsApi, listTagsApi, replaceStudentTagsApi, updateStudentApi } from '@/api/students'
+	import { createStudentApi, deleteStudentApi, importConfirmApi, importPreviewApi, replaceStudentTagsApi, updateStudentApi } from '@/api/students'
 	import type { Student, StudentStatus, Tag } from '@/types'
 	import { tagDomainClass } from '@/utils/domainColor'
+	import { useStudentsStore } from '@/stores/students'
 
 	/** 导入动作 */
 	type ImportAction = 'create' | 'skip' | 'update'
@@ -34,10 +36,9 @@
 
 	const router = useRouter()
 
-	const students = ref<Student[]>([])
-	const total = ref(0)
-	const tags = ref<Tag[]>([])
-	const listLoading = ref(false)
+	/** 学生域共享状态（与学生详情页同一份数据源） */
+	const studentsStore = useStudentsStore()
+	const { students, total, listLoading } = storeToRefs(studentsStore)
 
 	const searchText = ref('')
 	const filterFocusLevel = ref<number | ''>('')
@@ -75,7 +76,7 @@
 	}
 
 	/** 花名册可分配的标签（仅 L0 非敏感标签） */
-	const selectableTags = computed(() => tags.value.filter((tag) => tag.sensitiveLevel === 0))
+	const selectableTags = computed(() => studentsStore.selectableTags)
 
 	/** 标签按业务域分组，供多选下拉使用 */
 	const tagOptionGroups = computed(() => {
@@ -95,24 +96,7 @@
 	 * 解析标签选择：数字为已有标签；字符串为新建名（回车创建后归入「其他」域）。
 	 */
 	async function resolveTagSelection(values: Array<number | string>): Promise<number[]> {
-		const nextIds: number[] = []
-		for (const value of values) {
-			if (typeof value === 'number') {
-				nextIds.push(value)
-				continue
-			}
-			const name = String(value).trim()
-			if (!name) continue
-			const existing = selectableTags.value.find((tag) => tag.name === name)
-			if (existing) {
-				nextIds.push(existing.id)
-				continue
-			}
-			const created = await createTagApi({ name, domain: '其他' })
-			tags.value.push(created)
-			nextIds.push(created.id)
-		}
-		return [...new Set(nextIds)]
+		return studentsStore.resolveTagSelection(values)
 	}
 
 	/** 新建表单标签变更（支持输入新标签） */
@@ -179,22 +163,16 @@
 
 	/** 按敏感级别过滤可见标签（列表仅展示 L0） */
 	function getVisibleTags(tagIds: number[]): Tag[] {
-		const idSet = new Set(tagIds)
-		return tags.value.filter((tag) => idSet.has(tag.id) && tag.sensitiveLevel === 0)
+		return studentsStore.getVisibleTags(tagIds)
 	}
 
-	/** 加载标签字典 */
+	/** 加载标签字典（复用 students store，已加载时不重复请求） */
 	async function loadTags(): Promise<void> {
-		try {
-			tags.value = await listTagsApi()
-		} catch (err: unknown) {
-			ElMessage.error(err instanceof ApiError ? err.message : '加载标签失败')
-		}
+		await studentsStore.loadTags()
 	}
 
-	/** 加载学生列表 */
+	/** 加载学生列表（复用 students store） */
 	async function loadStudents(): Promise<void> {
-		listLoading.value = true
 		try {
 			const query: {
 				q?: string
@@ -216,13 +194,9 @@
 			if (filterFocusLevel.value !== '') {
 				query.focusLevel = filterFocusLevel.value
 			}
-			const result = await listStudentsApi(query)
-			students.value = result.items
-			total.value = result.total
+			await studentsStore.loadStudents(query)
 		} catch (err: unknown) {
 			ElMessage.error(err instanceof ApiError ? err.message : '加载花名册失败')
-		} finally {
-			listLoading.value = false
 		}
 	}
 
