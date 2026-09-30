@@ -18,6 +18,7 @@ import {
 } from '@/api/comments';
 import { listPromptsApi, type AiPromptDto } from '@/api/ai';
 import { listTermsApi, type TermDto } from '@/api/scores';
+import { streamComment } from '@/api/commentStream';
 
 /** localStorage 暂存 */
 interface CommentDraftPayload {
@@ -66,6 +67,13 @@ const dirty = ref(false);
 const draftTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const aiConfigured = ref(false);
 const filterStatus = ref<'all' | WorkbenchStatus>('all');
+
+/** 流式生成中 */
+const streaming = ref(false);
+/** 本次流式已产出的文本（续写的基线） */
+const streamPartial = ref('');
+/** 上次流式是否被中断 */
+const streamInterrupted = ref(false);
 
 /** 左侧状态筛选 */
 const filterOptions: Array<{ value: 'all' | WorkbenchStatus; label: string }> = [
@@ -284,7 +292,96 @@ async function handleGenerate(): Promise<void> {
   }
 }
 
-/** 采纳当前 */
+/**
+ * 流式生成（打字机）。
+ * continueFrom 非空时即为「续写」，后端只补发未生成的部分。
+ */
+async function handleGenerateStream(continueFrom?: string): Promise<void> {
+  if (!selected.value || termId.value === undefined || streaming.value) return;
+  const base = continueFrom ?? '';
+  streaming.value = true;
+  streamInterrupted.value = false;
+  streamPartial.value = base;
+  if (!base) {
+    editorText.value = '';
+  }
+  generating.value = true;
+  let errored = false;
+  try {
+    await streamComment(
+      {
+        studentId: selected.value.studentId,
+        termId: termId.value,
+        commentType: commentType.value,
+        tone: tone.value,
+        length: length.value,
+        includeAdvice: includeAdvice.value,
+        promptId: promptId.value,
+        continueFrom: base || undefined,
+      },
+      {
+        onMeta: (meta) => {
+          context.value = {
+            contextText: meta.contextText,
+            sections: meta.contextSections,
+            approxTokens: meta.approxTokens,
+          };
+          aiRecordId.value = meta.aiRecordId;
+          if (meta.error) ElMessage.warning(meta.error);
+        },
+        onDelta: (_chunk, accumulated) => {
+          editorText.value = accumulated;
+          streamPartial.value = accumulated;
+          dirty.value = true;
+        },
+        onDone: (text, interrupted) => {
+          editorText.value = text;
+          streamPartial.value = text;
+          streamInterrupted.value = interrupted;
+          if (interrupted) {
+            ElMessage.warning('生成中断，可点「续写」接着写');
+          } else {
+            ElMessage.success(base ? '续写完成' : '已生成草稿');
+          }
+          if (draftTimer.value) {
+            clearTimeout(draftTimer.value);
+            draftTimer.value = null;
+          }
+          saveLocalDraft();
+        },
+        onError: (err) => {
+          errored = true;
+          ElMessage.error(err.message);
+        },
+      },
+    );
+    if (errored) {
+      streamInterrupted.value = streamPartial.value.trim().length > 0;
+    } else {
+      await loadWorkbench({ keepEditor: true });
+    }
+  } finally {
+    streaming.value = false;
+    generating.value = false;
+  }
+}
+
+/** 从已生成的部分继续写 */
+async function handleContinueStream(): Promise<void> {
+  await handleGenerateStream(streamPartial.value);
+}
+/** 生成方式切换：流式 / 一次性 */
+async function onGenMode(mode: 'stream' | 'once'): Promise<void> {
+  if (mode === 'once') {
+    await handleGenerate();
+  } else {
+    await handleGenerateStream();
+  }
+}
+
+
+
+  /** 采纳当前 */
 async function handleAdopt(): Promise<void> {
   if (!selected.value || termId.value === undefined) return;
   const text = editorText.value.trim();
@@ -608,13 +705,37 @@ function openStudent(): void {
             <el-button link type="primary" @click="openStudent">学生详情</el-button>
           </div>
           <div class="comments-wb__actions">
-            <el-button :loading="generating" :disabled="batchRunning" @click="handleGenerate">
-              {{ selected.status === 'none' ? '生成' : '重新生成' }}
+            <el-button
+              :loading="streaming"
+              :disabled="batchRunning || streaming"
+              @click="handleGenerateStream()"
+            >
+              {{ streaming ? '生成中…' : selected.status === 'none' ? '生成' : '重新生成' }}
             </el-button>
+            <el-button
+              v-if="streamInterrupted"
+              type="warning"
+              :loading="streaming"
+              :disabled="streaming"
+              @click="handleContinueStream"
+            >
+              续写
+            </el-button>
+            <el-dropdown v-if="!streaming" trigger="click" @command="onGenMode">
+              <el-button text type="primary" class="comments-wb__more">
+                <el-icon><MoreFilled /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="stream">流式生成（打字机）</el-dropdown-item>
+                  <el-dropdown-item command="once">一次性生成</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button
               type="primary"
               :loading="adopting"
-              :disabled="!editorText.trim()"
+              :disabled="!editorText.trim() || streaming"
               @click="handleAdopt"
             >
               采纳

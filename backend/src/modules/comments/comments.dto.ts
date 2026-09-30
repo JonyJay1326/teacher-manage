@@ -67,6 +67,15 @@ export class GenerateCommentDto {
   promptId?: number;
 }
 
+/** 流式生成评语（续写用） */
+export class StreamCommentDto extends GenerateCommentDto {
+  /** 续写：传上次已生成到一半的文本 */
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  continueFrom?: string;
+}
+
 /** 采纳评语 */
 export class AdoptCommentDto {
   @Type(() => Number)
