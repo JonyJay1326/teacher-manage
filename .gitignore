@@ -25,3 +25,9 @@ Thumbs.db
 # 自动生成的类型文件
 frontend/src/auto-imports.d.ts
 frontend/src/components.d.ts
+
+# E2E（Playwright）
+test-results/
+playwright-report/
+blob-report/
+.playwright/
