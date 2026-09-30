@@ -11,6 +11,7 @@ import router from './router';
 import { setUnauthorizedHandler } from './api/http';
 import { useAuthStore } from './stores/auth';
 import './styles/global.css';
+import './styles/mobile.css';
 
 /** Element Plus 与日期组件使用中文 */
 dayjs.locale('zh-cn');
@@ -40,3 +41,18 @@ setUnauthorizedHandler(() => {
 });
 
 app.mount('#app');
+
+/**
+ * 注册 Service Worker（仅生产构建）。
+ *
+ * 浏览器只在 HTTPS 或 localhost 下允许注册；HTTP + 局域网 IP 下会静默失败，
+ * 因此注册失败不影响任何业务功能。
+ */
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // 非 HTTPS 环境下必然失败，属预期情况，不打扰用户
+    });
+  });
+}
+

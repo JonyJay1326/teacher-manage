@@ -6,6 +6,16 @@ import { isDemoPath, withDemoPrefix, stripDemoPrefix } from '@/demo/path';
 
 const route = useRoute();
 
+const props = defineProps<{
+  collapsed: boolean;
+  /** 窄屏抽屉展开态 */
+  mobileOpen?: boolean;
+}>();
+
+const emit = defineEmits<{
+  navigate: [];
+}>();
+
 /** 导航分组配置（业务路径，演示态再加前缀） */
 const baseNavGroups: NavGroup[] = [
   {
@@ -52,10 +62,6 @@ const baseNavGroups: NavGroup[] = [
   },
 ];
 
-defineProps<{
-  collapsed: boolean;
-}>();
-
 const inDemo = computed(() => isDemoPath(route.path));
 
 /** 侧栏菜单（演示态路径带 /demo） */
@@ -93,7 +99,13 @@ const activeMenu = computed(() => {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--collapsed': collapsed }">
+  <aside
+  class="sidebar"
+  :class="{
+    'sidebar--collapsed': collapsed,
+    'sidebar--mobile-open': props.mobileOpen === true,
+  }"
+>
     <div class="sidebar__logo">
       <img src="/favicon.svg" alt="ClassPilot" class="sidebar__logo-icon" />
       <div v-show="!collapsed" class="sidebar__brand">
@@ -103,6 +115,7 @@ const activeMenu = computed(() => {
     </div>
     <el-scrollbar class="sidebar__scroll">
       <el-menu
+        @select="emit('navigate')"
         :key="inDemo ? 'demo-nav' : 'live-nav'"
         :default-active="activeMenu"
         :collapse="collapsed"

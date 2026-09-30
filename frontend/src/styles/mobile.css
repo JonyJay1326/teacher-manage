@@ -1,0 +1,324 @@
+/**
+ * 移动端适配（≤768px）
+ *
+ * 桌面端维持 min-width:1200px 不变；此处仅在窄屏覆盖，
+ * 使 375px 下可用。原则：只做布局级修复，不做交互重设计。
+ */
+
+/* ============ 1. 解除 1200px 硬约束（仅窄屏） ============ */
+@media (max-width: 768px) {
+  html,
+  body {
+    min-width: 0;
+    overflow: auto;
+  }
+
+  #app {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+}
+
+/* ============ 2. 应用骨架：侧栏改抽屉 + 内容单列 ============ */
+@media (max-width: 768px) {
+  .app-layout {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-layout__main {
+    display: block;
+    overflow: visible;
+    min-height: 100vh;
+  }
+
+  .app-layout__content {
+    padding: var(--cp-gap-3);
+    overflow: visible;
+    height: auto;
+  }
+
+  /* 侧栏在窄屏隐藏，由顶栏汉堡按钮控制。
+     用 !important 覆盖组件内 scoped 的 .sidebar{display:flex}。 */
+  .sidebar {
+    display: none !important;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    z-index: 2000;
+    width: min(78vw, 280px) !important;
+    height: 100dvh !important;
+    box-shadow: var(--cp-shadow-3) !important;
+  }
+
+  .sidebar.sidebar--mobile-open {
+    display: flex !important;
+  }
+
+  /* 抽屉展开时锁住正文滚动 */
+  body:has(.sidebar__mask) {
+    overflow: hidden;
+  }
+
+  .sidebar__mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1900;
+    background: rgba(15, 23, 42, 0.45);
+    display: block;
+  }
+}
+
+/* ============ 3. 顶栏 ============ */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 var(--cp-gap-3);
+    gap: var(--cp-gap-2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar__title {
+    font-size: var(--cp-font-base);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 顶栏右侧按钮组在窄屏横向滚动，避免挤爆 */
+  .topbar__right {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar__right::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============ 4. 通用：卡片/网格/表格/分页 ============ */
+@media (max-width: 768px) {
+  /* 多列网格统一塌成单列 */
+  .archive-info-grid,
+  .sensitive-grid,
+  .settings__form {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 卡片内横向 padding 收敛 */
+  .el-card__body {
+    padding: var(--cp-gap-3);
+  }
+
+  /* 表格允许横向滚动，而不是撑破页面 */
+  .el-table {
+    max-width: 100%;
+  }
+
+  .el-table__inner-wrapper,
+  .el-table__body-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 表格列不强制等宽，让其自然布局 + 横向滚动 */
+  .el-table td.el-table__cell,
+  .el-table th.el-table__cell {
+    white-space: nowrap;
+  }
+
+  /* 分页在窄屏只保留必要控件 */
+  .el-pagination {
+    flex-wrap: wrap;
+    gap: var(--cp-gap-1);
+  }
+
+  /* 通用 flex 行允许换行 */
+  .settings__row,
+  .settings__row-actions,
+  .settings__filters,
+  .comments-tab__actions,
+  .scores-section__header {
+    flex-wrap: wrap;
+  }
+
+  .settings__row-actions {
+    width: 100%;
+  }
+
+  .el-dialog {
+    width: 92vw !important;
+  }
+
+  .el-message-box {
+    width: 88vw !important;
+  }
+
+  /* 抽屉全宽 */
+  .el-drawer {
+    width: 92vw !important;
+  }
+}
+
+/* ============ 5. 页面级微调 ============ */
+@media (max-width: 768px) {
+  /* 学生详情头部竖排 */
+  .student-detail__header-inner {
+    flex-wrap: wrap;
+    gap: var(--cp-gap-3);
+  }
+
+  .student-detail__info {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .student-detail__focus {
+    flex: 1 1 100%;
+    order: 3;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .student-detail__photo {
+    order: 1;
+  }
+
+  /* 时间线在窄屏收敛左边距与连线 */
+  .timeline {
+    padding-left: var(--cp-gap-4);
+  }
+
+  .timeline__axis {
+    left: -20px;
+  }
+
+  .timeline__item::before {
+    left: -14px;
+  }
+
+  .timeline__score-grid {
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  }
+
+  /* 成绩区统计块换行 */
+  .scores-section__stats {
+    gap: var(--cp-gap-4);
+  }
+
+  /* 评语工作台三栏改纵向堆叠 */
+  .comments-wb__main {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+
+  .comments-wb__list {
+    max-height: 200px;
+    width: 100%;
+  }
+
+  .comments-wb__editor {
+    width: 100%;
+  }
+
+  /* 事件/知识库等卡片 */
+  .guardian-card {
+    flex-wrap: wrap;
+  }
+
+  .guardian-card__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ============ 6. 打印/PWA 友好 ============ */
+@media (max-width: 768px) {
+  /* 移动端隐藏仅桌面有用的悬浮元素 */
+  .topbar__right {
+    display: none;
+  }
+}
+
+/* ============ 7. 补充：页签横向滚动 + 顶栏不外溢 ============ */
+@media (max-width: 768px) {
+  /* Element Plus 页签条在窄屏改为可横向滚动 */
+  .el-tabs__nav-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .el-tabs__nav-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .el-tabs__nav {
+    float: none;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  /* 顶栏右侧不撑破容器（内部滚动） */
+  .topbar__right {
+    max-width: 62vw;
+    min-width: 0;
+  }
+
+  /* 首页网格类容器允许收缩 */
+  .tt__grid,
+  .sc-brief__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 图表容器在窄屏收敛内边距 */
+  .scores-section__chart-panel {
+    padding: var(--cp-gap-2);
+  }
+}
+
+/* ============ 8. 补充修复：周课表网格 + 顶栏右侧不外溢 ============ */
+@media (max-width: 768px) {
+  /* 周课表：7 列在 375px 必然溢出，改为容器内横向滚动 */
+  .tt,
+  .tt__grid {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tt__grid {
+    min-width: 620px;
+  }
+
+  /* 顶栏右侧：固定可滚动宽度，绝不撑破视口 */
+  .topbar__right {
+    max-width: 55vw !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar__right::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 顶栏用户名在极窄屏隐藏，只留头像 */
+  .topbar__username {
+    display: none;
+  }
+
+  /* 首页两栏改单栏 */
+  .dashboard__split {
+    grid-template-columns: 1fr !important;
+  }
+
+  .focus-grid--side {
+    grid-template-columns: 1fr !important;
+  }
+}
