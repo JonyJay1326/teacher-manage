@@ -16,6 +16,11 @@ const route = useRoute();
 const sidebarRef = ref<InstanceType<typeof AppSidebar> | null>(null);
 
 const quickNoteVisible = ref(false);
+/** 窄屏下侧栏以抽屉形式展开 */
+const mobileNavOpen = ref(false);
+/** 移动端断点（与 styles/mobile.css 的 768px 保持一致） */
+const MOBILE_BP = 768;
+const isMobile = ref(false);
 const draftCount = ref(0);
 
 /** 当前页面标题 */
@@ -44,6 +49,26 @@ const pageTitle = computed(() => {
   };
   return titleMap[path] ?? 'ClassPilot';
 });
+
+/** 窄屏用抽屉，宽屏沿用原有折叠行为 */
+function onToggleSidebar(): void {
+  if (isMobile.value) {
+    mobileNavOpen.value = !mobileNavOpen.value;
+    return;
+  }
+  uiStore.toggleSidebar();
+}
+
+/** 视口跨越断点时复位窄屏抽屉，避免状态残留 */
+function syncViewport(): void {
+  const mobile = window.innerWidth <= MOBILE_BP;
+  if (mobile !== isMobile.value) {
+    isMobile.value = mobile;
+    if (!mobile) {
+      mobileNavOpen.value = false;
+    }
+  }
+}
 
 /** 打开速记弹窗 */
 function openQuickNote(): void {
@@ -87,26 +112,39 @@ provide('openQuickNote', openQuickNote);
 
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKeydown);
+  window.addEventListener('resize', syncViewport);
+  syncViewport();
   void refreshDraftCount();
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown);
+  window.removeEventListener('resize', syncViewport);
 });
 </script>
 
 <template>
-  <div class="app-layout">
+  <div
+    class="app-layout"
+    :class="{ 'app-layout--mobile': isMobile, 'app-layout--nav-open': isMobile && mobileNavOpen }"
+  >
     <AppSidebar
       ref="sidebarRef"
       :collapsed="uiStore.sidebarCollapsed"
+      :mobile-open="mobileNavOpen"
+      @navigate="mobileNavOpen = false"
+    />
+    <div
+      v-if="isMobile && mobileNavOpen"
+      class="sidebar__mask"
+      @click="mobileNavOpen = false"
     />
     <div class="app-layout__main">
       <AppTopbar
         :collapsed="uiStore.sidebarCollapsed"
         :page-title="pageTitle"
         :draft-count="draftCount"
-        @toggle-sidebar="uiStore.toggleSidebar()"
+        @toggle-sidebar="onToggleSidebar"
         @open-quick-note="openQuickNote"
       />
       <main class="app-layout__content cp-animate-in">
