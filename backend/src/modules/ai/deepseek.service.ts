@@ -117,6 +117,8 @@ export class DeepSeekService {
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    /** 流读取器：提前声明，便于 finally 中释放上游连接 */
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -137,7 +139,7 @@ export class DeepSeekService {
       let tokensIn = 0;
       let tokensOut = 0;
       let full = '';
-      const reader = response.body.getReader();
+      reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
 
@@ -173,6 +175,12 @@ export class DeepSeekService {
       } satisfies DeepSeekCallResult;
     } finally {
       clearTimeout(timer);
+      // 下游断开时 yield 会抛错，必须主动 cancel 上游，
+      // 否则到 DeepSeek 的连接会挂到超时才释放。
+      if (reader) {
+        await reader.cancel().catch(() => undefined);
+        controller.abort();
+      }
     }
   }
 

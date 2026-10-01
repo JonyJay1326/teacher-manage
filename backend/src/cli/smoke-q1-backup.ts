@@ -62,7 +62,8 @@ async function main(): Promise<void> {
   db.getDb().prepare("UPDATE students SET name = '漂移测试' WHERE id = 1").run();
   console.log(`[4] 制造漂移后，学生1=${db.getDb().prepare('SELECT name FROM students WHERE id=1').get() && (db.getDb().prepare('SELECT name FROM students WHERE id=1').get() as { name: string }).name}`);
 
-  const restored = backup.restore(first.filename, true);
+  // restore 自 Q7 审查起为 async（并发串行锁）
+  const restored = await backup.restore(first.filename, true);
   console.log(`[5] 恢复 -> safetyBackup=${restored.safetyBackup}, restoredFrom=${restored.restoredFrom}`);
   const after = countStudents();
   const name1 = (db.getDb().prepare('SELECT name FROM students WHERE id=1').get() as { name: string }).name;

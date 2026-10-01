@@ -132,6 +132,15 @@ export class SensitiveService {
     this.requireUnlocked(userId);
 
     const ok = this.sensitiveRepository.softDelete(studentId, cat);
+    if (!ok) {
+      // 记录不存在/已删除时不能返回 ok:false + HTTP 200，
+      // 否则前端会提示"已清空"但数据其实没动。
+      throw new AppException(
+        ErrorCodes.NOT_FOUND,
+        '高敏内容不存在或已删除',
+        404,
+      );
+    }
     this.auditLogsRepository.insert({
       action: 'l2_delete',
       targetStudentId: studentId,

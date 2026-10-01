@@ -1,5 +1,5 @@
 <script setup lang="ts">
-	import { computed, onMounted, ref, watch } from 'vue'
+	import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 	import { storeToRefs } from 'pinia'
 	import { useRouter } from 'vue-router'
 	import { ElMessage, ElMessageBox } from 'element-plus'
@@ -424,6 +424,12 @@
 		searchTimer = setTimeout(() => {
 			void loadStudents()
 		}, 300)
+	})
+
+	// 清理搜索防抖定时器，避免离开页面后仍触发一次请求
+	onBeforeUnmount(() => {
+		if (searchTimer) clearTimeout(searchTimer)
+		searchTimer = null
 	})
 </script>
 

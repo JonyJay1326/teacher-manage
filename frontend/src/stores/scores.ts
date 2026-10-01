@@ -237,6 +237,24 @@ export const useScoresStore = defineStore('scores', () => {
     };
   }
 
+  /**
+   * 使矩阵缓存失效。
+   * 成绩被写入（录入保存 / Excel 导入 / 重算排名）或考试被删除后必须调用，
+   * 否则「学生详情-成绩」等读缓存的页面会一直看到旧数据。
+   *
+   * @param examId 指定考试；省略则清空全部
+   */
+  function invalidateMatrix(examId?: number): void {
+    if (examId === undefined) {
+      matrixByExamId.value = {};
+      return;
+    }
+    if (!(examId in matrixByExamId.value)) return;
+    const next = { ...matrixByExamId.value };
+    delete next[examId];
+    matrixByExamId.value = next;
+  }
+
   return {
     exams,
     subjects,
@@ -252,5 +270,6 @@ export const useScoresStore = defineStore('scores', () => {
     selectExam,
     ensureMatrix,
     getStudentSummary,
+    invalidateMatrix,
   };
 });

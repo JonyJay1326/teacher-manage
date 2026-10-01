@@ -74,6 +74,8 @@ const streaming = ref(false);
 const streamPartial = ref('');
 /** 上次流式是否被中断 */
 const streamInterrupted = ref(false);
+/** 流式请求的取消控制器：卸载或切人时中断，避免连接悬挂 */
+let streamAbort: AbortController | null = null;
 
 /** 左侧状态筛选 */
 const filterOptions: Array<{ value: 'all' | WorkbenchStatus; label: string }> = [
@@ -195,6 +197,8 @@ async function selectStudent(
       return;
     }
   }
+  // 切换学生前中断上一个学生的流（否则两份文本会串到同一编辑器）
+  streamAbort?.abort();
   selectedId.value = studentId;
   await hydrateSelection(true);
 }
@@ -299,6 +303,8 @@ async function handleGenerate(): Promise<void> {
 async function handleGenerateStream(continueFrom?: string): Promise<void> {
   if (!selected.value || termId.value === undefined || streaming.value) return;
   const base = continueFrom ?? '';
+  streamAbort?.abort();
+  streamAbort = new AbortController();
   streaming.value = true;
   streamInterrupted.value = false;
   streamPartial.value = base;
@@ -354,6 +360,7 @@ async function handleGenerateStream(continueFrom?: string): Promise<void> {
           ElMessage.error(err.message);
         },
       },
+      streamAbort.signal,
     );
     if (errored) {
       streamInterrupted.value = streamPartial.value.trim().length > 0;
@@ -361,6 +368,7 @@ async function handleGenerateStream(continueFrom?: string): Promise<void> {
       await loadWorkbench({ keepEditor: true });
     }
   } finally {
+    streamAbort = null;
     streaming.value = false;
     generating.value = false;
   }
@@ -572,6 +580,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', onBeforeUnload);
   if (draftTimer.value) clearTimeout(draftTimer.value);
+  // 中断进行中的流式请求，避免连接悬挂到服务端超时
+  streamAbort?.abort();
 });
 
 /** 打开学生详情 */
