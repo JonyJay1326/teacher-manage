@@ -49,7 +49,8 @@ export function ensureE2eDatabase(): void {
 
   // 账号幂等创建：已存在会报冲突，忽略即可
   try {
-    runInBackend('node', [
+    // 同理用 process.execPath，避免依赖 PATH 里存在 node
+    runInBackend(process.execPath, [
       'dist/cli/create-user.js',
       E2E_USER.username,
       E2E_USER.password,
