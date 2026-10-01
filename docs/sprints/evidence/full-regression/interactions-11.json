@@ -1,0 +1,68 @@
+[
+ {
+  "view": "PC",
+  "name": "学生详情 6 个 tab 切换",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "高敏 PIN 解锁",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "高敏内容保存",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "事件新建",
+  "ok": false,
+  "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - w"
+ },
+ {
+  "view": "PC",
+  "name": "事件搜索",
+  "ok": false,
+  "detail": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - wa"
+ },
+ {
+  "view": "移动端",
+  "name": "学生详情 6 个 tab 切换",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "高敏(已解锁态直达)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "高敏 PIN 解锁",
+  "ok": false,
+  "detail": "未出现 PIN 输入框"
+ },
+ {
+  "view": "移动端",
+  "name": "事件新建+落库",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "事件时间时区正确",
+  "ok": true,
+  "detail": "偏差 0.3 分钟"
+ },
+ {
+  "view": "移动端",
+  "name": "事件搜索防抖",
+  "ok": true,
+  "detail": ""
+ }
+]
