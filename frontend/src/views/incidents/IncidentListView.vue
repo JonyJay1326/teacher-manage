@@ -14,6 +14,7 @@ import {
 } from '@/api/incidents';
 import { listStudentsApi } from '@/api/students';
 import { useIncidentsStore } from '@/stores/incidents';
+import { localInputToIso, toLocalInput } from '@/utils/localDateTime';
 import type { IncidentCategory, Student } from '@/types';
 
 type StatusTab = 'all' | 'draft' | 'confirmed';
@@ -178,7 +179,8 @@ function openCreateDialog(): void {
   createCategory.value = '其他';
   createSeverity.value = 1;
   createStudentIds.value = [];
-  createOccurredAt.value = new Date().toISOString().slice(0, 16);
+  // 控件绑定的是本地墙上时间，不能用 toISOString（那是 UTC，会偏移）
+  createOccurredAt.value = toLocalInput(new Date());
   createFollowUpNeeded.value = false;
   createFollowUpDeadline.value = '';
   createVisible.value = true;
@@ -200,9 +202,7 @@ async function submitCreate(): Promise<void> {
   }
   createLoading.value = true;
   try {
-    const occurredIso = createOccurredAt.value
-      ? new Date(createOccurredAt.value).toISOString()
-      : undefined;
+    const occurredIso = localInputToIso(createOccurredAt.value);
     await createIncidentApi({
       title: createTitle.value.trim(),
       content: createContent.value.trim(),

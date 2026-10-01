@@ -337,3 +337,75 @@ describe('scores store · 某生成绩汇总', () => {
     expect(store.matrixLoading).toBe(false);
   });
 });
+
+describe('scores store · 矩阵缓存失效', () => {
+  it('invalidateMatrix(指定) 只清该场考试', async () => {
+    listExamsApi.mockResolvedValue([exam(1, 'A', '2025-01-01'), exam(2, 'B', '2025-06-01')]);
+    getExamMatrixApi.mockResolvedValue({ subjects: SUBJECTS, rows: [] });
+    const store = useScoresStore();
+    await store.loadExams();
+    await store.ensureMatrix(1);
+    await store.ensureMatrix(2);
+    expect(Object.keys(store.matrixByExamId).sort()).toEqual(['1', '2']);
+
+    store.invalidateMatrix(1);
+    expect(Object.keys(store.matrixByExamId)).toEqual(['2']);
+  });
+
+  it('失效后 ensureMatrix 会重新请求', async () => {
+    listExamsApi.mockResolvedValue([exam(1, 'A', '2025-01-01')]);
+    getExamMatrixApi.mockResolvedValue({ subjects: SUBJECTS, rows: [] });
+    const store = useScoresStore();
+    await store.loadExams();
+    await store.ensureMatrix(1);
+    expect(getExamMatrixApi).toHaveBeenCalledTimes(1);
+
+    store.invalidateMatrix(1);
+    await store.ensureMatrix(1);
+    expect(getExamMatrixApi).toHaveBeenCalledTimes(2);
+  });
+
+  it('invalidateMatrix() 无参清空全部', async () => {
+    listExamsApi.mockResolvedValue([exam(1, 'A', '2025-01-01'), exam(2, 'B', '2025-06-01')]);
+    getExamMatrixApi.mockResolvedValue({ subjects: SUBJECTS, rows: [] });
+    const store = useScoresStore();
+    await store.loadExams();
+    await store.ensureMatrix(1);
+    await store.ensureMatrix(2);
+
+    store.invalidateMatrix();
+    expect(store.matrixByExamId).toEqual({});
+  });
+
+  it('失效不存在的考试不报错、也不误清其它', async () => {
+    listExamsApi.mockResolvedValue([exam(1, 'A', '2025-01-01')]);
+    getExamMatrixApi.mockResolvedValue({ subjects: SUBJECTS, rows: [] });
+    const store = useScoresStore();
+    await store.loadExams();
+    await store.ensureMatrix(1);
+
+    store.invalidateMatrix(999);
+    expect(Object.keys(store.matrixByExamId)).toEqual(['1']);
+  });
+
+  it('成绩变化并失效后 getStudentSummary 返回新数据', async () => {
+    listExamsApi.mockResolvedValue([exam(1, '期末', '2026-01-10')]);
+    getExamMatrixApi.mockResolvedValue({
+      subjects: SUBJECTS,
+      rows: [row(1, [100, 90])],
+    });
+    const store = useScoresStore();
+    await store.loadExams();
+    const before = await store.getStudentSummary(1, 1);
+    expect(before!.totalScore).toBe(190);
+
+    // 模拟保存后服务端数据变化 + 缓存失效
+    getExamMatrixApi.mockResolvedValue({
+      subjects: SUBJECTS,
+      rows: [row(1, [60, 50])],
+    });
+    store.invalidateMatrix(1);
+    const after = await store.getStudentSummary(1, 1);
+    expect(after!.totalScore).toBe(110);
+  });
+});

@@ -30,6 +30,13 @@ interface BackupMeta {
 @Injectable()
 export class BackupService {
   private readonly logger = new Logger(BackupService.name);
+  /**
+   * 恢复串行锁。
+   * replaceWithBackup 会 close 并重建 SQLite 连接，
+   * 期间任何并发请求都会命中 "connection is not open"。
+   * 用 promise 链把恢复排成队列，并发进入时直接拒绝而不是排队阻塞。
+   */
+  private restoring = false;
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -151,39 +158,53 @@ export class BackupService {
    * 从备份恢复：先备份当前库，再替换。
    * confirm 必须为 true。
    */
-  restore(filename: string, confirm: boolean): {
+  async restore(filename: string, confirm: boolean): Promise<{
     ok: boolean;
     safetyBackup: string;
     restoredFrom: string;
-  } {
+  }> {
     if (!confirm) {
       throw new AppException(ErrorCodes.VALIDATION, '恢复须二次确认');
     }
-    const source = path.join(this.getBackupDir(), this.assertBackupFilename(filename));
-    if (!fs.existsSync(source)) {
-      throw new AppException(ErrorCodes.NOT_FOUND, '备份文件不存在', 404);
-    }
-    if (!this.quickCheck(source)) {
+    // 恢复期间拒绝并发进入：否则并发请求会打到刚被 close 的连接
+    if (this.restoring) {
       throw new AppException(
-        ErrorCodes.STATE_INVALID,
-        '该备份完整性检查未通过，拒绝恢复',
+        ErrorCodes.CONFLICT,
+        '已有恢复操作进行中，请稍后重试',
+        409,
       );
     }
+    this.restoring = true;
+    try {
+      const source = path.join(this.getBackupDir(), this.assertBackupFilename(filename));
+      if (!fs.existsSync(source)) {
+        throw new AppException(ErrorCodes.NOT_FOUND, '备份文件不存在', 404);
+      }
+      if (!this.quickCheck(source)) {
+        throw new AppException(
+          ErrorCodes.STATE_INVALID,
+          '该备份完整性检查未通过，拒绝恢复',
+        );
+      }
 
-    const safety = this.runBackup('pre-restore');
-    this.databaseService.replaceWithBackup(source);
-    this.auditLogsRepository.insert({
-      action: 'backup_restore',
-      detail: JSON.stringify({
-        restoredFrom: filename,
+      const safety = this.runBackup('pre-restore');
+      this.databaseService.replaceWithBackup(source);
+      this.auditLogsRepository.insert({
+        action: 'backup_restore',
+        detail: JSON.stringify({
+          restoredFrom: filename,
+          safetyBackup: safety.filename,
+        }),
+      });
+      return {
+        ok: true,
         safetyBackup: safety.filename,
-      }),
-    });
-    return {
-      ok: true,
-      safetyBackup: safety.filename,
-      restoredFrom: filename,
-    };
+        restoredFrom: filename,
+      };
+    } finally {
+      // 任何失败路径都必须释放锁，否则后续恢复永久 409
+      this.restoring = false;
+    }
   }
 
   /** 快速完整性检查 */

@@ -55,6 +55,8 @@ export async function streamComment(
     continueFrom?: string;
   },
   handlers: StreamHandlers,
+  /** 外部取消信号：组件卸载或用户主动停止时中断，避免连接悬挂 */
+  signal?: AbortSignal,
 ): Promise<void> {
   // demo 模式：业务请求会被 http 层拦截成内存 Mock，SSE 需显式走真实后端的 mock 端点
   const path = isDemoMode()
@@ -74,6 +76,7 @@ export async function streamComment(
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(payload),
+      signal,
     });
   } catch (err: unknown) {
     handlers.onError?.(err instanceof Error ? err : new Error('网络错误'));
@@ -133,8 +136,13 @@ export async function streamComment(
     }
     handlers.onDone?.(accumulated, interrupted);
   } catch (err: unknown) {
-    // 读取中断（如用户切页/网络断开）：保留已产出部分并标记可续写
+    // 读取中断（切页 / 网络断开 / 主动取消）：保留已产出部分并标记可续写
     interrupted = true;
+    if (signal?.aborted) {
+      // 主动取消不算错误，不打扰用户
+      handlers.onDone?.(accumulated, true);
+      return;
+    }
     handlers.onError?.(err instanceof Error ? err : new Error('流中断'));
     handlers.onDone?.(accumulated, interrupted);
   }
