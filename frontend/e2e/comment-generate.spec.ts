@@ -44,12 +44,10 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
     // AI 未配置 → 前端降级为占位草稿，编辑器里应有内容
     const editor = page.locator('.comments-wb__editor textarea').first();
     await expect(editor).toBeVisible({ timeout: 30_000 });
-    await expect
-      .poll(
-        async () => (await editor.inputValue()).trim().length,
-        { timeout: 30_000 },
-      )
-      .toBeGreaterThan(0);
+
+    // 等「生成中…」按钮态回落 = 流已收完（onDone 已把完整文本写入编辑器）。
+    // 不能只等长度 > 0：打字机第一个 delta 就有内容，会读到中间态导致误判。
+    await expect(generateBtn).not.toContainText('生成中', { timeout: 60_000 });
 
     const draft = (await editor.inputValue()).trim();
     expect(draft.length).toBeGreaterThan(10);
@@ -89,8 +87,11 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
     await page.goto('/demo/students');
     // 用页面标题，不能用 getByText（会命中窄屏下隐藏的侧栏菜单项）
     await expect(page.locator('h2.cp-page-header__title')).toHaveText('花名册', { timeout: 30_000 });
+    // 行数用 poll 判定；count 每轮重新求值，避免导航切换瞬间上下文被销毁
+    await expect
+      .poll(async () => page.locator('.el-table__body tr').count(), { timeout: 30_000 })
+      .toBeGreaterThan(5);
     const rows = page.locator('.el-table__body tr');
-    await expect.poll(async () => rows.count(), { timeout: 30_000 }).toBeGreaterThan(5);
 
     // 学生详情可打开
     await rows.first().click();
