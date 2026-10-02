@@ -25,7 +25,10 @@ test.describe('AI / 评语模块', () => {
 
     await page.locator('.comments-wb__actions button').filter({ hasText: '采纳' }).first().click();
     await page.waitForTimeout(2500);
-    await expect(page.getByText('已采纳').first()).toBeVisible();
+    // 限定在工作台列表内（页面别处也有「已采纳」文案）
+    await expect(
+      page.locator('.comments-wb__list-body').getByText('已采纳').first(),
+    ).toBeVisible();
   });
 
   test('学生详情手工新建评语可落库', async ({ page }) => {

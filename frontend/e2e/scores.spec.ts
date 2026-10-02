@@ -14,10 +14,8 @@ test.describe('成绩模块', () => {
     await page.waitForTimeout(2500);
 
     const cell = page.locator('.el-table__body td input, .el-table__body .cell input').first();
-    if ((await cell.count()) === 0) {
-      test.skip(true, '未找到可录入单元格');
-      return;
-    }
+    // 硬断言：录入格找不到说明页面结构变了，不能静默 skip 掩盖回归
+    await expect(cell).toBeVisible();
     const before = await cell.inputValue();
     await cell.fill('');
     await page.keyboard.type('88');

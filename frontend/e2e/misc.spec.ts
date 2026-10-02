@@ -75,4 +75,23 @@ test.describe('移动端适配', () => {
       expect(m.sw, `${p} 出现横向溢出 ${m.sw}/${m.cw}`).toBeLessThanOrEqual(m.cw + 1);
     }
   });
+
+  test('窄屏顶栏：汉堡与用户菜单均可见且可点', async ({ page, isMobile }) => {
+    test.skip(!isMobile, '仅移动端 project 适用');
+    await login(page);
+    await page.waitForTimeout(2000);
+
+    // 顶栏右侧不得被整体隐藏（历史上曾因 CSS 顺序依赖误设 display:none）
+    const right = page.locator('.topbar__right');
+    await expect(right).toBeVisible();
+    await expect(page.locator('.topbar__user')).toBeVisible();
+
+    // 左侧汉堡按钮必须可点（曾被右侧挤出行外）
+    const burger = page.locator('.topbar__left button').first();
+    await expect(burger).toBeVisible();
+    await burger.click();
+    await page.waitForTimeout(900);
+    await expect(page.locator('.sidebar')).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
 });

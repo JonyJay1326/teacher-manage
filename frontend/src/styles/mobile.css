@@ -81,39 +81,36 @@
     z-index: 100;
   }
 
-  .topbar__title {
-    font-size: var(--cp-font-base);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* 顶栏右侧按钮组在窄屏横向滚动，避免挤爆 */
-  .topbar__right {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  /* 左侧（汉堡+标题）必须可收缩，否则会被 flex-shrink:0 的右侧顶出可点范围 */
+  /* 顶栏在窄屏：左侧（汉堡+标题）可收缩，右侧内部横滚。
+     合并为一处，避免多处规则互相覆盖产生顺序依赖。 */
   .topbar__left {
     flex-shrink: 1;
     min-width: 0;
   }
 
   .topbar__title {
+    font-size: var(--cp-font-base);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  /* 375px 放不下「速记+设置+用户」三组，隐藏次要项避免互相挤压 */
-  .topbar__kbd,
-  .topbar__settings {
-    display: none;
+  .topbar__right {
+    min-width: 0;
+    flex-shrink: 0;
+    margin-left: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .topbar__right::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 375px 放不下「速记+设置+用户」三组，隐藏次要项避免互相挤压 */
+  .topbar__kbd,
+  .topbar__settings {
     display: none;
   }
 }
@@ -256,14 +253,6 @@
   }
 }
 
-/* ============ 6. 打印/PWA 友好 ============ */
-@media (max-width: 768px) {
-  /* 移动端隐藏仅桌面有用的悬浮元素 */
-  .topbar__right {
-    display: none;
-  }
-}
-
 /* ============ 7. 补充：页签横向滚动 + 顶栏不外溢 ============ */
 @media (max-width: 768px) {
   /* Element Plus 页签条在窄屏改为可横向滚动 */
@@ -282,18 +271,6 @@
     float: none;
     width: max-content;
     min-width: 100%;
-  }
-
-  /* 顶栏右侧：不用 max-width 限制，用户菜单浮层才不会溢出视口 */
-  .topbar__right {
-    min-width: 0;
-    /* 只让内部横向滚动；给固定宽度会盖住左侧汉堡按钮 */
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .topbar__right::-webkit-scrollbar {
-    display: none;
   }
 
   /* 首页网格类容器允许收缩 */
@@ -320,18 +297,6 @@
 
   .tt__grid {
     min-width: 620px;
-  }
-
-  /* 顶栏右侧：固定可滚动宽度，绝不撑破视口 */
-  .topbar__right {
-    /* 不用 max-width 裁剪：用户菜单相对本容器定位，
-       限宽会让「退出登录」浮层被截断在视口外 */
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-
-  .topbar__right::-webkit-scrollbar {
-    display: none;
   }
 
   /* 顶栏用户名在极窄屏隐藏，只留头像 */

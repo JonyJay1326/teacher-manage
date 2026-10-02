@@ -37,11 +37,13 @@ test.describe('设置模块', () => {
   test('修改密码校验：原密码错误应报错', async ({ page }) => {
     await page.locator('.el-tabs__item').nth(1).click();
     await page.waitForTimeout(1000);
-    const inputs = page.locator('.el-form input[type="password"]');
-    if ((await inputs.count()) < 3) {
-      test.skip(true, '未找到密码表单');
-      return;
-    }
+    // 安全 tab 内有两个密码表单（改密码 3 个 + PIN 3 个），
+    // 必须按「修改登录密码」标题所在的卡片精确定位，不能用全局 nth 猜
+    const pwdCard = page
+      .locator('.cp-card')
+      .filter({ has: page.getByRole('heading', { name: '修改登录密码' }) });
+    const inputs = pwdCard.locator('input[type="password"]');
+    await expect(inputs).toHaveCount(3);
     await inputs.nth(0).fill('wrong-password');
     await inputs.nth(1).fill('newpass12345');
     await inputs.nth(2).fill('newpass12345');
