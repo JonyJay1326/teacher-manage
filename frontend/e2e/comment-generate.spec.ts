@@ -85,13 +85,22 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
 
     // 花名册在 demo 态可用
     await page.goto('/demo/students');
+    // goto 只等 load 事件，Vue Router 守卫的二次导航发生在其后。
+    // 必须等 URL 与目标路由一致、且标题已渲染，才说明路由真正落定。
+    await page.waitForURL(/\/demo\/students/, { timeout: 30_000 });
     // 用页面标题，不能用 getByText（会命中窄屏下隐藏的侧栏菜单项）
     await expect(page.locator('h2.cp-page-header__title')).toHaveText('花名册', { timeout: 30_000 });
-    // 行数用 poll 判定；count 每轮重新求值，避免导航切换瞬间上下文被销毁
-    await expect
-      .poll(async () => page.locator('.el-table__body tr').count(), { timeout: 30_000 })
-      .toBeGreaterThan(5);
     const rows = page.locator('.el-table__body tr');
+    // 导航切换瞬间 count() 会抛「Execution context was destroyed」，按 0 处理让 poll 继续重试
+    await expect
+      .poll(async () => {
+        try {
+          return await rows.count();
+        } catch {
+          return 0;
+        }
+      }, { timeout: 30_000 })
+      .toBeGreaterThan(5);
 
     // 学生详情可打开
     await rows.first().click();
