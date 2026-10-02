@@ -16,10 +16,12 @@ import {
   type IncidentListItem,
 } from '@/api/incidents';
 import { listStudentsApi } from '@/api/students';
+import { useIncidentsStore } from '@/stores/incidents';
 import type { IncidentCategory, Student } from '@/types';
 
 const route = useRoute();
 const router = useRouter();
+const incidentsStore = useIncidentsStore();
 const incidentId = Number(route.params.id);
 
 const loading = ref(false);
@@ -167,6 +169,8 @@ async function handleSave(): Promise<void> {
       });
       ElMessage.success('已保存');
     }
+    // 通知列表页与顶栏角标刷新（本页的写操作不经过列表页）
+    incidentsStore.bumpDataVersion();
     await loadDetail();
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '保存失败');
@@ -185,6 +189,7 @@ async function handleDelete(): Promise<void> {
   try {
     await deleteIncidentApi(incidentId);
     ElMessage.success('已删除');
+    incidentsStore.bumpDataVersion();
     router.push('/incidents');
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '删除失败');

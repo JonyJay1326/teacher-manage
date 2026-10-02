@@ -4,9 +4,10 @@ import { ConfigService } from '@nestjs/config';
 /** Chat 请求体 */
 interface ChatCompletionRequest {
   model: string;
-  messages: Array<{ role: 'system' | 'user'; content: string }>;
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   temperature?: number;
   response_format?: { type: 'json_object' };
+  stream?: boolean;
 }
 
 /** Chat 响应体 */
@@ -21,6 +22,13 @@ export interface DeepSeekCallResult {
   tokensIn: number;
   tokensOut: number;
   model: string;
+}
+
+/** 流式单块解析结果 */
+interface SseDelta {
+  text: string;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  done: boolean;
 }
 
 /** DeepSeek 封装（超时 60s，退避重试 2 次） */
@@ -66,6 +74,143 @@ export class DeepSeekService {
       temperature: 0.1,
       jsonMode: true,
     });
+  }
+
+  /**
+   * 流式对话：逐块 yield 增量文本。
+   *
+   * 与 chat() 不同：**不做内部重试**。流一旦开始就无法安全重放，
+   * 失败直接抛给调用方降级。
+   *
+   * @param continueFrom 非空时表示「续写」，已产出文本作为前缀提示回传
+   */
+  async *chatStream(
+    systemPrompt: string,
+    userPrompt: string,
+    continueFrom?: string,
+  ): AsyncGenerator<string, DeepSeekCallResult | void, undefined> {
+    if (!this.isConfigured()) {
+      throw new Error('DEEPSEEK_NOT_CONFIGURED');
+    }
+
+    const messages: ChatCompletionRequest['messages'] = [
+      { role: 'system', content: systemPrompt },
+    ];
+    const prefix = continueFrom?.trim() ?? '';
+    if (prefix) {
+      // 续写：把已产出内容作为 assistant 消息，要求模型从其末尾接着写
+      messages.push({ role: 'assistant', content: prefix });
+      messages.push({
+        role: 'user',
+        content: `请从上面那段文字的末尾紧接着继续往下写，不要重复已有内容，只输出续写的部分。`,
+      });
+    } else {
+      messages.push({ role: 'user', content: userPrompt });
+    }
+
+    const body: ChatCompletionRequest = {
+      model: this.model,
+      messages,
+      temperature: 0.7,
+      stream: true,
+    };
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    /** 流读取器：提前声明，便于 finally 中释放上游连接 */
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`DeepSeek HTTP ${response.status}`);
+      }
+      if (!response.body) {
+        throw new Error('DeepSeek 未返回流');
+      }
+
+      let tokensIn = 0;
+      let tokensOut = 0;
+      let full = '';
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let idx = buffer.indexOf('\n\n');
+        while (idx !== -1) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const delta = this.parseSseDelta(raw);
+          if (delta) {
+            if (delta.text) {
+              full += delta.text;
+              yield delta.text;
+            }
+            if (delta.usage) {
+              tokensIn = delta.usage.prompt_tokens ?? tokensIn;
+              tokensOut = delta.usage.completion_tokens ?? tokensOut;
+            }
+          }
+          idx = buffer.indexOf('\n\n');
+        }
+      }
+
+      return {
+        content: full,
+        tokensIn,
+        tokensOut,
+        model: this.model,
+      } satisfies DeepSeekCallResult;
+    } finally {
+      clearTimeout(timer);
+      // 下游断开时 yield 会抛错，必须主动 cancel 上游，
+      // 否则到 DeepSeek 的连接会挂到超时才释放。
+      if (reader) {
+        await reader.cancel().catch(() => undefined);
+        controller.abort();
+      }
+    }
+  }
+
+  /** 解析一条 SSE 事件块（若干 data: 行） */
+  private parseSseDelta(raw: string): SseDelta | null {
+    let saw = false;
+    for (const line of raw.split('\n')) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      saw = true;
+      const payload = t.slice(5).trim();
+      if (!payload) continue;
+      if (payload === '[DONE]') {
+        return { text: '', done: true };
+      }
+      try {
+        const obj = JSON.parse(payload) as {
+          choices?: Array<{ delta?: { content?: string } }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
+        return {
+          text: obj.choices?.[0]?.delta?.content ?? '',
+          usage: obj.usage,
+          done: false,
+        };
+      } catch {
+        // 心跳/注释等非 JSON 行，忽略
+      }
+    }
+    return saw ? { text: '', done: false } : null;
   }
 
   /** 通用对话（含重试） */

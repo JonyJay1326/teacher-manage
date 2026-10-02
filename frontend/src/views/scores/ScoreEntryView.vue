@@ -15,6 +15,7 @@ import {
   type ExcelImportParseResult,
 } from '@/api/scores';
 import type { Exam, ScoreCellStatus, Subject } from '@/types';
+import { useScoresStore } from '@/stores/scores';
 
 /** API 入库用中文成绩状态 */
 type ScoreStatusCn = '正常' | '缺考' | '免考';
@@ -70,6 +71,7 @@ type PasteAlignMode = 'order' | 'studentNo';
 
 const route = useRoute();
 const router = useRouter();
+const scoresStore = useScoresStore();
 
 const examId = Number(route.params.id);
 const loading = ref(false);
@@ -795,6 +797,8 @@ async function handleExcelCommit(): Promise<void> {
     ElMessage.success(`已写入 ${res.written} 个成绩格`);
     excelVisible.value = false;
     clearDraft();
+    // 成绩已变更，使共享矩阵缓存失效（学生详情/分析页读的是缓存）
+    scoresStore.invalidateMatrix(examId);
     await loadAllEntryRows();
 
     try {
@@ -805,6 +809,7 @@ async function handleExcelCommit(): Promise<void> {
       });
       await recalcRanksApi(examId);
       ElMessage.success('排名已重算');
+      scoresStore.invalidateMatrix(examId);
       await loadAllEntryRows();
     } catch {
       // 用户取消
@@ -841,6 +846,7 @@ async function saveAndRecalc(): Promise<void> {
     await recalcRanksApi(examId);
     clearDraft();
     ElMessage.success('已保存并重算排名');
+    scoresStore.invalidateMatrix(examId);
     await loadAllEntryRows();
   } catch (err: unknown) {
     ElMessage.error(err instanceof ApiError ? err.message : '保存失败');

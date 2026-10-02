@@ -17,6 +17,28 @@ export interface BackupItemDto {
   trigger: string | null;
 }
 
+/** 备份校验结果 */
+export interface BackupVerifyDto {
+  filename: string;
+  integrityOk: boolean;
+  sha256Ok: boolean | null;
+  size: number;
+  detail: string;
+}
+
+/** 全量 Excel 导出结果 */
+export interface FullExportDto {
+  filename: string;
+  mimeType: string;
+  base64: string;
+  counts: {
+    students: number;
+    scoreRows: number;
+    incidents: number;
+    comments: number;
+  };
+}
+
 /** 审计日志项 */
 export interface AuditLogItemDto {
   id: number;
@@ -50,11 +72,21 @@ export function runBackupApi(): Promise<{
   return httpPost('/v1/backup/run');
 }
 
+/** 校验单个备份完整性 */
+export function verifyBackupApi(filename: string): Promise<BackupVerifyDto> {
+  return httpPost('/v1/backup/verify', { filename });
+}
+
 /** 恢复备份 */
 export function restoreBackupApi(
   filename: string,
 ): Promise<{ ok: boolean; safetyBackup: string; restoredFrom: string }> {
   return httpPost('/v1/backup/restore', { filename, confirm: true });
+}
+
+/** 一键导出全量 Excel */
+export function exportFullExcelApi(): Promise<FullExportDto> {
+  return httpGet('/v1/export/excel');
 }
 
 /** 审计日志 */

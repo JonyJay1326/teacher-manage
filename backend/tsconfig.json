@@ -20,5 +20,5 @@
     "esModuleInterop": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/cli/smoke-*.ts"]
+  "exclude": ["node_modules", "dist", "src/cli/smoke-*.ts", "src/**/*.spec.ts", "vitest.config.ts"]
 }

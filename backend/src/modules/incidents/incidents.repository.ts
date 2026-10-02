@@ -348,6 +348,14 @@ export class IncidentsRepository {
   }
 
   /** 查询到期未完成跟进事件 */
+  /**
+   * 到期未完成的跟进。
+   *
+   * 时区说明：follow_up_deadline 存的是裸日期串 YYYY-MM-DD（教师勾选的日历日），
+   * 不带时区信息。此处用 date(...,'localtime') 与「服务器本地日历日」比较是
+   * 有意为之——按教师所在时区的日历日判断到期，符合业务语义；
+   * 若改成 UTC 会在东八区凌晨 0-8 点误判为未到期。
+   */
   findDueFollowUps(limit: number): IncidentRow[] {
     return this.databaseService
       .getDb()

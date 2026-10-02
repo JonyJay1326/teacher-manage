@@ -20,7 +20,7 @@
 - API：REST /api/v1/，统一响应 { code, message, data }；错误码分段 1xxx 参数/2xxx 认证/3xxx 业务/5xxx 系统
 - 数据库变更：只通过 backend/migrations/ 编号 SQL 脚本，启动时自动执行；禁止改已应用的迁移文件，只能新增
 - 全表软删除（deleted_at），禁止物理删除业务数据
-- 前端不做响应式适配，布局 min-width: 1200px
+- 布局：桌面端维持 min-width: 1200px；≤768px 走移动端适配（覆盖样式集中在 `frontend/src/styles/mobile.css`，改动前先确认桌面端零影响）
 - UI 严格遵循 PRD 附录 D 设计令牌：颜色/间距/圆角/阴影只允许引用 tokens.css 的 --cp-* 变量或 Element 变量；禁止组件内硬编码色值；禁止暗色主题；渐变/阴影档位仅允许附录 D 白名单用途（侧栏 Logo 块、页面英雄横幅、头像点缀、页面氛围底）
 - **弹层强制**：所有 `el-dialog` 必须 `append-to-body` + `align-center`；所有 `el-drawer` 必须 `append-to-body`（`.cp-animate-in` 的 transform / 布局 overflow 会裁切未挂 body 的弹层）
 - **ECharts**：统一用 `components/VChart` + 按需注册；须在容器有有效宽高后 `resize`（ResizeObserver，禁止只靠 window.resize）；**全站「软几何」风格**（附录 D.5），调色板/样式只引用 `frontend/src/constants/chart.ts`

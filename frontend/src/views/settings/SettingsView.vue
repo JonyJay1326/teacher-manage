@@ -6,16 +6,20 @@ import { ApiError } from '@/api/http';
 import { changePasswordApi, pinStatusApi, setPinApi, type PinStatus } from '@/api/auth';
 import { aiHealthApi, type AiHealthView } from '@/api/comments';
 import {
+  exportFullExcelApi,
   getThresholdsApi,
   listAuditLogsApi,
   listBackupsApi,
   restoreBackupApi,
   runBackupApi,
   updateThresholdsApi,
+  verifyBackupApi,
   type AuditLogItemDto,
   type BackupItemDto,
   type ThresholdsDto,
 } from '@/api/settings';
+import { exportScoreCardsZip } from '@/api/reports';
+import { isDemoMode } from '@/demo/mode';
 
 const router = useRouter();
 const activeTab = ref('thresholds');
@@ -43,6 +47,9 @@ const backups = ref<BackupItemDto[]>([]);
 const backupLoading = ref(false);
 const backupListing = ref(false);
 const restoreLoading = ref('');
+const verifyLoading = ref('');
+const exportLoading = ref(false);
+const reportLoading = ref(false);
 
 const aiHealth = ref<AiHealthView | null>(null);
 
@@ -229,6 +236,67 @@ async function restoreBackup(item: BackupItemDto): Promise<void> {
     ElMessage.error(err instanceof ApiError ? err.message : '恢复失败');
   } finally {
     restoreLoading.value = '';
+  }
+}
+
+/** 校验单个备份完整性 */
+async function verifyBackup(item: BackupItemDto): Promise<void> {
+  verifyLoading.value = item.filename;
+  try {
+    const res = await verifyBackupApi(item.filename);
+    if (res.integrityOk && res.sha256Ok !== false) {
+      ElMessage.success(`${item.filename}：${res.detail}`);
+    } else {
+      ElMessage.error(`${item.filename}：${res.detail}`);
+    }
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof ApiError ? err.message : '备份校验失败');
+  } finally {
+    verifyLoading.value = '';
+  }
+}
+
+/** 一键导出全量 Excel */
+async function handleExportExcel(): Promise<void> {
+  exportLoading.value = true;
+  try {
+    const data = await exportFullExcelApi();
+    const binary = atob(data.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: data.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = data.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    ElMessage.success(
+      `已导出：学生 ${data.counts.students} · 成绩 ${data.counts.scoreRows} · 事件 ${data.counts.incidents} · 评语 ${data.counts.comments}`,
+    );
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof ApiError ? err.message : '导出失败');
+  } finally {
+    exportLoading.value = false;
+  }
+}
+
+/** 一键批量导出家长成绩单 PDF（打包 zip） */
+async function handleExportScoreCards(): Promise<void> {
+  if (isDemoMode()) {
+    ElMessage.info('演示模式不生成 PDF，请退出演示后重试');
+    return;
+  }
+  reportLoading.value = true;
+  try {
+    const res = await exportScoreCardsZip();
+    ElMessage.success(`已导出 ${res.filename}（${formatSize(res.size)}）`);
+  } catch (err: unknown) {
+    ElMessage.error(err instanceof Error ? err.message : '成绩单导出失败');
+  } finally {
+    reportLoading.value = false;
   }
 }
 
@@ -420,7 +488,7 @@ onMounted(() => {
             <div>
               <h3 class="cp-section-title">数据备份</h3>
               <p class="settings__hint">
-                每日 02:30 自动备份；恢复前会强制先备份当前库。
+                每日 02:30 自动备份，滚动保留最近 14 份；恢复前会强制先备份当前库。
               </p>
             </div>
             <div class="settings__row-actions">
@@ -460,8 +528,16 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="trigger" label="来源" width="110" />
-            <el-table-column label="操作" width="120" fixed="right">
+            <el-table-column label="操作" width="190" fixed="right">
               <template #default="{ row }">
+                <el-button
+                  link
+                  type="primary"
+                  :loading="verifyLoading === row.filename"
+                  @click="verifyBackup(row as BackupItemDto)"
+                >
+                  校验
+                </el-button>
                 <el-button
                   link
                   type="danger"
@@ -473,6 +549,35 @@ onMounted(() => {
               </template>
             </el-table-column>
           </el-table>
+        </div>
+
+        <div class="cp-card cp-content-card settings__block">
+          <div class="settings__row">
+            <div>
+              <h3 class="cp-section-title">全量数据导出</h3>
+              <p class="settings__hint">
+                导出为一个 Excel，含学生、成绩、事件、评语四个 sheet；不含 L2 高敏内容。
+              </p>
+            </div>
+            <div class="settings__row-actions">
+              <el-button
+                type="primary"
+                :loading="exportLoading"
+                @click="handleExportExcel"
+              >
+                导出 Excel
+              </el-button>
+              <el-button
+                :loading="reportLoading"
+                @click="handleExportScoreCards"
+              >
+                导出成绩单 PDF
+              </el-button>
+            </div>
+          </div>
+          <p class="settings__hint settings__hint--tight">
+            成绩单为「每个学生一份 PDF、只含本人数据」，一键打包为 zip；取最近一场已录成绩的考试。
+          </p>
         </div>
       </el-tab-pane>
 
@@ -570,6 +675,10 @@ onMounted(() => {
   margin: var(--cp-gap-2) 0 var(--cp-gap-4);
   font-size: var(--cp-font-sm);
   color: var(--cp-text-2);
+}
+
+.settings__hint--tight {
+  margin: var(--cp-gap-3) 0 0;
 }
 
 .settings__form {

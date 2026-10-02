@@ -1,0 +1,230 @@
+[
+ {
+  "view": "PC",
+  "name": "登录",
+  "ok": true,
+  "detail": "/"
+ },
+ {
+  "view": "PC",
+  "name": "路由 / (首页看板)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /students (花名册)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /scores (考试管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /incidents (事件记录)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /knowledge (文档管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /knowledge/ask (智能问答)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/comments (评语工作台)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/ask (学情问答)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/talk (沟通话术)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/summary (工作总结)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/prompts (模板管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /ai/records (生成历史)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /analysis (分析中心)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /recycle (回收站)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "路由 /settings (系统设置)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "详情 /students/601 (学生详情)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "详情 /scores/exams/94 (考试详情)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "PC",
+  "name": "详情 /scores/exams/94/enter (成绩录入)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "登录",
+  "ok": true,
+  "detail": "/"
+ },
+ {
+  "view": "移动端",
+  "name": "路由 / (首页看板)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /students (花名册)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /scores (考试管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /incidents (事件记录)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /knowledge (文档管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /knowledge/ask (智能问答)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/comments (评语工作台)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/ask (学情问答)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/talk (沟通话术)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/summary (工作总结)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/prompts (模板管理)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /ai/records (生成历史)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /analysis (分析中心)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /recycle (回收站)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "路由 /settings (系统设置)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "详情 /students/601 (学生详情)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "详情 /scores/exams/94 (考试详情)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "view": "移动端",
+  "name": "详情 /scores/exams/94/enter (成绩录入)",
+  "ok": true,
+  "detail": ""
+ }
+]

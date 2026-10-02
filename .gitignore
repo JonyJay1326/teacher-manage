@@ -25,3 +25,12 @@ Thumbs.db
 # 自动生成的类型文件
 frontend/src/auto-imports.d.ts
 frontend/src/components.d.ts
+
+# E2E（Playwright）
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# 搜狗输入法未展开 %SystemDrive% 时会把缓存写到进程 CWD（跑浏览器时在仓库根生成）
+%SystemDrive%/
