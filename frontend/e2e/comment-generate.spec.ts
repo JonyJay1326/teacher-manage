@@ -25,9 +25,8 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
 
     // 打开评语工作台
     await page.goto('/demo/ai/comments');
-    await expect(
-      page.getByRole('heading', { name: '评语工作台' }),
-    ).toBeVisible({ timeout: 30_000 });
+    // 用 hero 区标题定位：页面内「评语工作台」文本不止一处
+    await expect(page.locator('h1').first()).toHaveText('评语工作台', { timeout: 30_000 });
 
     // 等学生列表渲染，选中第一个学生
     const firstStudent = page.locator('.comments-wb__list-body .comments-wb__item').first();
@@ -64,12 +63,20 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
 
     // 采纳无二次确认弹窗，直接等列表状态变化
     // 采纳后状态应变为「已采纳」
-    await expect(page.getByText('已采纳').first()).toBeVisible({ timeout: 20_000 });
+    // 限定在工作台列表项内，避免命中隐藏 tab 的同名文本
+    await expect(
+      page.locator('.comments-wb__list-body').getByText('已采纳').first(),
+    ).toBeVisible({ timeout: 20_000 });
 
-    // 刷新后仍在（demo 内存库在同会话内保留）
-    await page.reload();
-    await page.waitForTimeout(2500);
-    await expect(page.getByText('已采纳').first()).toBeVisible({ timeout: 20_000 });
+    // 切换到另一个学生再切回，确认采纳状态被持久化到 demo 内存库
+    const items = page.locator('.comments-wb__list-body .comments-wb__item');
+    await items.nth(1).click();
+    await page.waitForTimeout(1200);
+    await items.first().click();
+    await page.waitForTimeout(1200);
+    await expect(
+      page.locator('.comments-wb__list-body').getByText('已采纳').first(),
+    ).toBeVisible({ timeout: 20_000 });
 
     await captureOnFailure(page, 'comment-adopted');
   });
@@ -80,7 +87,8 @@ test.describe('评语生成（demo 模式 · mock DeepSeek）', () => {
 
     // 花名册在 demo 态可用
     await page.goto('/demo/students');
-    await expect(page.getByText('花名册').first()).toBeVisible({ timeout: 30_000 });
+    // 用页面标题，不能用 getByText（会命中窄屏下隐藏的侧栏菜单项）
+    await expect(page.locator('h2.cp-page-header__title')).toHaveText('花名册', { timeout: 30_000 });
     const rows = page.locator('.el-table__body tr');
     await expect.poll(async () => rows.count(), { timeout: 30_000 }).toBeGreaterThan(5);
 

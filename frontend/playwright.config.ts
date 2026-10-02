@@ -2,7 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * E2E 配置：起一套完全独立的「后端 + Vite」，使用专用 mock 库。
- * 绝不复用开发/生产数据——backend/data/e2e.db 由 e2e/setup.ts 重建。
+ * 绝不复用开发/生产数据——backend/data/e2e.db 由 e2e/global-setup.ts 重建。
+ *
+ * 两个 project 覆盖 PC 与移动端视口：
+ *  - chromium        1440x950（桌面，min-width:1200px 布局）
+ *  - chromium-mobile  375x812（移动适配断点 <=768px）
  */
 
 const API_PORT = Number(process.env.E2E_API_PORT ?? 3210);
@@ -13,18 +17,18 @@ export default defineConfig({
   testDir: './e2e',
   // 必须在 webServer 之前播种：后端一启动就会创建空库
   globalSetup: './e2e/global-setup.ts',
-  // 两条链路共享同一套后端与库，串行执行避免互相污染
+  // 用例会写库（建事件/评语/标签），串行执行避免互相污染
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // 写操作用例对状态敏感，失败重试一次
+  retries: 1,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   outputDir: 'test-results',
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
-    viewport: { width: 1440, height: 1000 },
     locale: 'zh-CN',
     timezoneId: 'Asia/Shanghai',
     actionTimeout: 15_000,
@@ -33,7 +37,22 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 950 } },
+    },
+    {
+      name: 'chromium-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 375, height: 812 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 2,
+      },
+    },
+  ],
   webServer: [
     {
       // 后端：独立端口 + 独立库

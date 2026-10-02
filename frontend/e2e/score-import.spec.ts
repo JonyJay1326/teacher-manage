@@ -74,9 +74,10 @@ test.describe('成绩 xlsx 导入全链路', () => {
     // 详情页应能看到刚导入的学生与分数（示例表首行 202601 李敏 语文 66）
     const detail = page.locator('.exam-detail, .exam-matrix, table').first();
     await expect(detail).toBeVisible();
-    await expect(page.getByText('李敏').first()).toBeVisible({ timeout: 20_000 });
+    // 限定在矩阵表内：页面别处（进度、统计）也可能有同名数字
+    await expect(detail.getByText('李敏').first()).toBeVisible({ timeout: 20_000 });
     // 语文 66 必须出现在矩阵里
-    await expect(page.getByText('66', { exact: true }).first()).toBeVisible();
+    await expect(detail.getByText('66', { exact: true }).first()).toBeVisible();
 
     await captureOnFailure(page, 'score-import-list');
 

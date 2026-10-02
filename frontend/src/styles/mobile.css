@@ -94,6 +94,25 @@
     scrollbar-width: none;
   }
 
+  /* 左侧（汉堡+标题）必须可收缩，否则会被 flex-shrink:0 的右侧顶出可点范围 */
+  .topbar__left {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .topbar__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 375px 放不下「速记+设置+用户」三组，隐藏次要项避免互相挤压 */
+  .topbar__kbd,
+  .topbar__settings {
+    display: none;
+  }
+
   .topbar__right::-webkit-scrollbar {
     display: none;
   }
@@ -265,10 +284,16 @@
     min-width: 100%;
   }
 
-  /* 顶栏右侧不撑破容器（内部滚动） */
+  /* 顶栏右侧：不用 max-width 限制，用户菜单浮层才不会溢出视口 */
   .topbar__right {
-    max-width: 62vw;
     min-width: 0;
+    /* 只让内部横向滚动；给固定宽度会盖住左侧汉堡按钮 */
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar__right::-webkit-scrollbar {
+    display: none;
   }
 
   /* 首页网格类容器允许收缩 */
@@ -299,9 +324,10 @@
 
   /* 顶栏右侧：固定可滚动宽度，绝不撑破视口 */
   .topbar__right {
-    max-width: 55vw !important;
-    overflow-x: auto;
-    scrollbar-width: none;
+    /* 不用 max-width 裁剪：用户菜单相对本容器定位，
+       限宽会让「退出登录」浮层被截断在视口外 */
+    flex-shrink: 0;
+    margin-left: auto;
   }
 
   .topbar__right::-webkit-scrollbar {
@@ -320,5 +346,63 @@
 
   .focus-grid--side {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============ 9. AI / 知识库模块多栏布局塌陷 ============ */
+@media (max-width: 768px) {
+  /* PromptsView 三栏（列表+编辑+预览）最小宽度合计 740px，窄屏必然溢出 */
+  .prompts__main,
+  .talk-script__grid,
+  .data-ask__layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============ 10. 成绩录入页（fullscreen 布局，绕过 AppLayout） ============ */
+@media (max-width: 768px) {
+  .score-entry {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  /* 顶栏按钮组在窄屏换行，避免把页面撑宽 */
+  .score-entry__header {
+    height: auto;
+    flex-wrap: wrap;
+    gap: var(--cp-gap-2);
+    padding: var(--cp-gap-2) var(--cp-gap-3);
+  }
+
+  /* 三段（标题/进度/按钮）都允许收缩，否则 space-between 会把右侧挤出视口 */
+  .score-entry__header-left,
+  .score-entry__header-center,
+  .score-entry__header-right {
+    /* 组件内为 flex-shrink:0，需 !important 才能在窄屏收缩 */
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    flex-wrap: wrap;
+    gap: var(--cp-gap-2);
+  }
+
+  /* 表格容器允许横向滚动，而不是撑破文档流 */
+  .score-entry__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--cp-gap-3);
+    max-width: 100%;
+  }
+
+  .score-entry__table {
+    /* 列宽由 el-table 自身决定；这里不再强制最小宽度，
+       否则 min-width 会把父容器一起撑宽 */
+    max-width: 100%;
+  }
+
+  .score-entry__footer {
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--cp-gap-2) var(--cp-gap-3);
+    gap: var(--cp-gap-2);
   }
 }
